@@ -1,5 +1,5 @@
 $(document).ready(function() {
-  const table = $('#tableRekap').DataTable({
+let table = $('#tableRekap').DataTable({
     language: {
       url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json',
     },
@@ -14,7 +14,6 @@ $(document).ready(function() {
     loadRekapitulasi();
   });
   
-  // Attach event listener to filter button
   const filterBtn = document.querySelector('form.row button');
   if (filterBtn) {
     filterBtn.addEventListener('click', (e) => {
@@ -24,13 +23,11 @@ $(document).ready(function() {
   }
 
   function loadRekapitulasi() {
-    // Get filter values
     const selects = document.querySelectorAll('form.row select');
     const month = selects[0] ? selects[0].value : '07';
     const year = selects[1] ? selects[1].value : '2026';
     const typeFilter = selects[2] ? selects[2].value : 'Semua';
     
-    // Set filter button to loading
     if (filterBtn) {
       filterBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Loading...';
       filterBtn.disabled = true;
@@ -42,64 +39,94 @@ $(document).ready(function() {
         filterBtn.disabled = false;
       }
       
-      if(res && res.success) {
-        table.clear();
+      if(res && res.success && res.data) {
+        // Destroy existing DataTables instance to rebuild it
+        if ($.fn.DataTable.isDataTable('#tableRekap')) {
+          $('#tableRekap').DataTable().destroy();
+        }
+        
         const data = res.data;
         let index = 1;
+        let tbodyHtml = '';
         
-        data.users.forEach(u => {
-          // Filter by role/type
-          if (typeFilter !== 'Semua' && u.status !== typeFilter) return;
-          
-          let hadirLengkap = 0;
-          let sakit = 0;
-          let cutiTahunan = 0;
-          
-          // Calculate attendance for this user in this month
-          data.attendance.forEach(a => {
-            if (a.username === u.username || a.username === u.nip) {
-              const dateStr = a.timestamp ? String(a.timestamp).split(',')[0].split('T')[0] : '';
-              if (dateStr.startsWith(`${year}-${month}`)) {
-                hadirLengkap++;
+        if (data.users && data.users.length > 0) {
+          data.users.forEach(u => {
+            try {
+              if (u.role === 'Admin' || u.status === 'Admin') return;
+              if (typeFilter !== 'Semua' && u.status !== typeFilter) return;
+            
+              let hadirLengkap = 0;
+              let sakit = 0;
+              let cutiTahunan = 0;
+              
+              if (data.attendance && data.attendance.length > 0) {
+                data.attendance.forEach(a => {
+                  if (a.username === u.username || a.username === u.nip) {
+                    const dateStr = a.timestamp ? String(a.timestamp).split(',')[0].split('T')[0] : '';
+                    if (dateStr.startsWith(`${year}-${month}`)) {
+                      hadirLengkap++;
+                    }
+                  }
+                });
               }
+              
+              if (data.permits && data.permits.length > 0) {
+                data.permits.forEach(p => {
+                   if ((p.username === u.username || p.username === u.nip) && p.status === 'Disetujui') {
+                     const dateStr = p.tanggalMulai ? String(p.tanggalMulai).split('T')[0] : '';
+                     if (dateStr.startsWith(`${year}-${month}`)) {
+                       const tipe = p.tipe ? String(p.tipe).toLowerCase() : '';
+                       if(tipe.includes('sakit')) sakit++;
+                       else cutiTahunan++;
+                     }
+                   }
+                });
+              }
+              
+              let totalKerja = 22; 
+              let tKet = Math.max(0, totalKerja - hadirLengkap - sakit - cutiTahunan);
+              let percentage = ((hadirLengkap / totalKerja) * 100).toFixed(1);
+              let badgeColor = percentage >= 80 ? 'text-success' : 'text-danger';
+              
+              tbodyHtml += `
+                <tr>
+                  <td>${index++}</td>
+                  <td><div class="text-start fw-bold">${u.nama || '-'}</div><small class="text-muted">${u.nip || '-'}</small></td>
+                  <td>${totalKerja}</td>
+                  <td>${hadirLengkap}</td>
+                  <td>0</td>
+                  <td>0</td>
+                  <td>0</td>
+                  <td>0</td>
+                  <td>0</td>
+                  <td>${tKet}</td>
+                  <td>0</td>
+                  <td>0</td>
+                  <td>${cutiTahunan}</td>
+                  <td>0</td>
+                  <td>${sakit}</td>
+                  <td>0</td>
+                  <td>0</td>
+                  <td><span class="${badgeColor} fw-bold">${percentage}%</span></td>
+                </tr>
+              `;
+            } catch (e) {
+              console.error("Error processing user:", u, e);
+              tbodyHtml += `<tr><td>${index++}</td><td class="text-danger fw-bold">ERROR</td><td colspan="16">${e.message}</td></tr>`;
             }
           });
-          
-          // Calculate permits
-          data.permits.forEach(p => {
-             if ((p.username === u.username || p.username === u.nip) && p.status === 'Disetujui') {
-               const dateStr = p.tanggalMulai ? String(p.tanggalMulai).split('T')[0] : '';
-               if (dateStr.startsWith(`${year}-${month}`)) {
-                 const tipe = p.tipe ? String(p.tipe).toLowerCase() : '';
-                 if(tipe.includes('sakit')) sakit++;
-                 else cutiTahunan++;
-               }
-             }
-          });
-          
-          let totalKerja = 22; // Asumsi
-          let tKet = Math.max(0, totalKerja - hadirLengkap - sakit - cutiTahunan);
-          let percentage = ((hadirLengkap / totalKerja) * 100).toFixed(1);
-          
-          table.row.add([
-            index++,
-            `<div class="text-start fw-bold">${u.nama}</div><small class="text-muted">${u.nip || '-'}</small>`,
-            totalKerja,
-            hadirLengkap, // LGKP
-            0, // H-MSK
-            0, // H-PLG
-            0, 0, 0, // Jam, Menit, Kali (Keterlambatan)
-            tKet, // T.KET
-            0, 0, // DD, DL
-            cutiTahunan, // THN
-            0, // BSR
-            sakit, // SKT
-            0, 0, // CAP, LHR
-            `<span class="${percentage >= 80 ? 'text-success' : 'text-danger'} fw-bold">${percentage}%</span>`
-          ]);
+        }
+        
+        // Inject HTML
+        $('#tableRekap tbody').html(tbodyHtml);
+        
+        // Re-initialize DataTable
+        table = $('#tableRekap').DataTable({
+          language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json' },
+          scrollX: true,
+          ordering: false
         });
         
-        table.draw();
       } else {
         App.showToast('Gagal memuat rekapitulasi', 'error');
       }

@@ -93,23 +93,32 @@
           <div class="glass-card p-4 h-100">
             <h5 class="fw-bold mb-4">Tambah Hari Libur</h5>
             <form id="formLibur">
-              <div class="mb-3">
-                <label class="form-label">Tanggal</label>
-                <input type="date" class="form-control form-control-md3" required>
+              <div class="row mb-3">
+                <div class="col-6">
+                  <label class="form-label">Tanggal Mulai</label>
+                  <input type="date" id="hl_start" class="form-control form-control-md3" required>
+                </div>
+                <div class="col-6">
+                  <label class="form-label">Tanggal Selesai</label>
+                  <input type="date" id="hl_end" class="form-control form-control-md3" required>
+                </div>
               </div>
               <div class="mb-3">
                 <label class="form-label">Keterangan</label>
-                <input type="text" class="form-control form-control-md3" placeholder="Contoh: Idul Fitri" required>
+                <input type="text" id="hl_desc" class="form-control form-control-md3" placeholder="Contoh: Idul Fitri" required>
               </div>
               <div class="mb-4">
                 <label class="form-label">Jenis Libur</label>
-                <select class="form-select form-control-md3" required>
+                <select id="hl_type" class="form-select form-control-md3" required>
                   <option value="Nasional">Hari Libur Nasional</option>
                   <option value="Cuti Bersama">Cuti Bersama</option>
                   <option value="Sekolah">Libur Sekolah</option>
                 </select>
               </div>
-              <button type="submit" class="btn btn-primary-custom w-100 hover-scale">Tambah</button>
+              <div class="d-flex gap-2">
+                <button type="submit" id="btnSubmit" class="btn btn-primary-custom w-100 hover-scale">Tambah</button>
+                <button type="button" id="btnCancel" class="btn btn-secondary w-100 hover-scale d-none">Batal</button>
+              </div>
             </form>
           </div>
         </div>
@@ -118,26 +127,7 @@
           <div class="glass-card p-4 h-100">
             <h5 class="fw-bold mb-4">Daftar Hari Libur (Tahun 2026)</h5>
             <div class="list-group list-group-flush border-0">
-              <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center px-0 border-bottom border-light">
-                <div>
-                  <h6 class="mb-1 fw-bold text-danger">1 Januari 2026</h6>
-                  <small class="text-muted">Tahun Baru Masehi</small>
-                </div>
-                <div>
-                  <span class="badge bg-primary rounded-pill me-2">Nasional</span>
-                  <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                </div>
-              </div>
-              <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center px-0 border-bottom border-light">
-                <div>
-                  <h6 class="mb-1 fw-bold text-danger">17 Agustus 2026</h6>
-                  <small class="text-muted">Hari Kemerdekaan RI</small>
-                </div>
-                <div>
-                  <span class="badge bg-primary rounded-pill me-2">Nasional</span>
-                  <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                </div>
-              </div>
+              <!-- Data hari libur akan dimuat di sini -->
             </div>
           </div>
         </div>
@@ -153,12 +143,6 @@
   <script src="assets/js/app.js"></script>
   <script src="assets/js/auth.js"></script>
   <script src="assets/js/dashboard.js"></script>
-  <script>
-    document.getElementById('formLibur').addEventListener('submit', (e) => {
-      e.preventDefault();
-      App.showToast('Hari libur berhasil ditambahkan', 'success');
-      e.target.reset();
-    });
-  </script>
+  <script src="assets/js/hari-libur.js"></script>
 </body>
 </html>

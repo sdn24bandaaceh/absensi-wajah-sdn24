@@ -92,6 +92,26 @@ function setupDatabase() {
     sheetSettings.appendRow(["SCHOOL_LNG", "'95.3146"]);
     sheetSettings.appendRow(["MAX_RADIUS_METERS", "100"]);
     sheetSettings.appendRow(["WEEKLY_SCHEDULE", JSON.stringify(defaultSchedule)]);
+    
+    const defaultHolidays = [
+      { date: '2026-01-01', name: 'Tahun Baru Masehi', type: 'Nasional' },
+      { date: '2026-08-17', name: 'Hari Kemerdekaan RI', type: 'Nasional' }
+    ];
+    sheetSettings.appendRow(["HOLIDAYS", JSON.stringify(defaultHolidays)]);
+    
+    const defaultProfile = {
+      nama: 'SD Negeri 24 Banda Aceh',
+      alamat: 'Jl. Contoh Alamat No. 123, Banda Aceh',
+      kepsek: 'Hidayat, S.Pd., M.Pd.'
+    };
+    sheetSettings.appendRow(["SCHOOL_PROFILE", JSON.stringify(defaultProfile)]);
+    
+    const defaultAppConfig = {
+      liveness: true,
+      multiDevice: false,
+      threshold: 0.7
+    };
+    sheetSettings.appendRow(["APP_CONFIG", JSON.stringify(defaultAppConfig)]);
   }
 
   Logger.log("Database berhasil disetup! Silakan lanjutkan dengan menyiapkan endpoint doPost / doGet.");

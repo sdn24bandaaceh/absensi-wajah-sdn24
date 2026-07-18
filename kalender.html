@@ -121,32 +121,6 @@
   <script src="assets/js/app.js"></script>
   <script src="assets/js/auth.js"></script>
   <script src="assets/js/dashboard.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      var calendarEl = document.getElementById('calendar');
-      var calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        locale: 'id',
-        headerToolbar: {
-          left: 'prev,next today',
-          center: 'title',
-          right: 'dayGridMonth,timeGridWeek'
-        },
-        events: [
-          {
-            title: 'Tahun Baru',
-            start: '2026-01-01',
-            color: '#EF4444' // Danger color
-          },
-          {
-            title: 'Rapat Dewan Guru',
-            start: '2026-07-20',
-            color: '#F59E0B'
-          }
-        ]
-      });
-      calendar.render();
-    });
-  </script>
+  <script src="assets/js/kalender.js"></script>
 </body>
 </html>

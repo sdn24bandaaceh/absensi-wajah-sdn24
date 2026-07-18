@@ -107,38 +107,7 @@
                 <th>Aksi</th>
               </tr>
             </thead>
-            <tbody>
-              <tr>
-                <td>admin</td>
-                <td>Administrator Sistem</td>
-                <td><span class="badge bg-danger">Administrator</span></td>
-                <td><span class="badge bg-success">Aktif</span></td>
-                <td>
-                  <button class="btn btn-sm btn-warning text-white"><i class="bi bi-key"></i> Reset Pass</button>
-                  <button class="btn btn-sm btn-secondary" disabled><i class="bi bi-ban"></i></button>
-                </td>
-              </tr>
-              <tr>
-                <td>kepsek</td>
-                <td>Kepala Sekolah SDN 24</td>
-                <td><span class="badge bg-info">Kepala Sekolah</span></td>
-                <td><span class="badge bg-success">Aktif</span></td>
-                <td>
-                  <button class="btn btn-sm btn-warning text-white"><i class="bi bi-key"></i> Reset Pass</button>
-                  <button class="btn btn-sm btn-danger"><i class="bi bi-ban"></i></button>
-                </td>
-              </tr>
-              <tr>
-                <td>operator</td>
-                <td>Operator TU</td>
-                <td><span class="badge bg-primary">Operator</span></td>
-                <td><span class="badge bg-success">Aktif</span></td>
-                <td>
-                  <button class="btn btn-sm btn-warning text-white"><i class="bi bi-key"></i> Reset Pass</button>
-                  <button class="btn btn-sm btn-danger"><i class="bi bi-ban"></i></button>
-                </td>
-              </tr>
-            </tbody>
+              <!-- Diisi via pengguna.js -->
           </table>
         </div>
       </div>
@@ -157,19 +126,19 @@
           <form id="formTambahUser">
             <div class="mb-3">
               <label class="form-label">Username</label>
-              <input type="text" class="form-control form-control-md3" required>
+              <input type="text" id="u_username" class="form-control form-control-md3" required>
             </div>
             <div class="mb-3">
               <label class="form-label">Nama Lengkap</label>
-              <input type="text" class="form-control form-control-md3" required>
+              <input type="text" id="u_nama" class="form-control form-control-md3" required>
             </div>
             <div class="mb-3">
-              <label class="form-label">Password Sementara</label>
-              <input type="password" class="form-control form-control-md3" required>
+              <label class="form-label">Password</label>
+              <input type="password" id="u_password" class="form-control form-control-md3" required>
             </div>
             <div class="mb-3">
               <label class="form-label">Hak Akses</label>
-              <select class="form-select form-control-md3" required>
+              <select id="u_role" class="form-select form-control-md3" required>
                 <option value="Operator">Operator</option>
                 <option value="Kepala Sekolah">Kepala Sekolah</option>
                 <option value="Admin">Administrator</option>
@@ -194,23 +163,6 @@
   
   <script src="assets/js/app.js"></script>
   <script src="assets/js/auth.js"></script>
-  <script src="assets/js/dashboard.js"></script>
-  <script>
-    $(document).ready(function() {
-      $('#tablePengguna').DataTable({
-        language: {
-          url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json',
-        }
-      });
-      
-      document.getElementById('formTambahUser').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const modal = bootstrap.Modal.getInstance(document.getElementById('modalTambahUser'));
-        modal.hide();
-        e.target.reset();
-        App.showToast('Pengguna berhasil ditambahkan', 'success');
-      });
-    });
-  </script>
+  <script src="assets/js/pengguna.js"></script>
 </body>
 </html>

@@ -94,8 +94,8 @@
             <h5 class="fw-bold">Laporan Harian</h5>
             <p class="text-muted small">Cetak atau unduh laporan kehadiran harian untuk seluruh pegawai.</p>
             <div class="mt-auto">
-              <input type="date" class="form-control form-control-md3 mb-3">
-              <button class="btn btn-danger w-100" onclick="exportData('PDF')"><i class="bi bi-download me-2"></i> Unduh PDF</button>
+              <input type="date" id="dateHarian" class="form-control form-control-md3 mb-3">
+              <button class="btn btn-danger w-100" id="btnHarian"><i class="bi bi-download me-2"></i> Cetak Harian</button>
             </div>
           </div>
         </div>
@@ -106,8 +106,8 @@
             <h5 class="fw-bold">Rekap Bulanan</h5>
             <p class="text-muted small">Ekspor rekapitulasi data kehadiran bulanan dalam format Excel.</p>
             <div class="mt-auto">
-              <input type="month" class="form-control form-control-md3 mb-3">
-              <button class="btn btn-success w-100" onclick="exportData('Excel')"><i class="bi bi-file-earmark-spreadsheet me-2"></i> Ekspor Excel</button>
+              <input type="month" id="monthBulanan" class="form-control form-control-md3 mb-3">
+              <button class="btn btn-success w-100" id="btnBulanan"><i class="bi bi-file-earmark-spreadsheet me-2"></i> Ekspor CSV</button>
             </div>
           </div>
         </div>
@@ -118,11 +118,10 @@
             <h5 class="fw-bold">Cetak Laporan Per Pegawai</h5>
             <p class="text-muted small">Cetak laporan riwayat absensi secara individu per pegawai.</p>
             <div class="mt-auto">
-              <select class="form-select form-control-md3 mb-3">
-                <option>Ahmad Syauqi, S.Pd</option>
-                <option>Siti Aminah</option>
+              <select id="selectPegawai" class="form-select form-control-md3 mb-3">
+                <option value="">Pilih Pegawai...</option>
               </select>
-              <button class="btn btn-primary-custom w-100" onclick="exportData('Print')"><i class="bi bi-printer me-2"></i> Cetak Dokumen</button>
+              <button class="btn btn-primary-custom w-100" id="btnPegawai"><i class="bi bi-printer me-2"></i> Cetak Dokumen</button>
             </div>
           </div>
         </div>
@@ -137,20 +136,6 @@
   <script src="assets/js/app.js"></script>
   <script src="assets/js/auth.js"></script>
   <script src="assets/js/dashboard.js"></script>
-  <script>
-    function exportData(type) {
-      Swal.fire({
-        title: 'Menyiapkan Dokumen',
-        html: `Membuat laporan dalam format <b>${type}</b>...`,
-        timer: 2000,
-        timerProgressBar: true,
-        didOpen: () => {
-          Swal.showLoading();
-        }
-      }).then((result) => {
-        App.showToast(`Dokumen ${type} berhasil diunduh.`, 'success');
-      });
-    }
-  </script>
+  <script src="assets/js/laporan.js"></script>
 </body>
 </html>

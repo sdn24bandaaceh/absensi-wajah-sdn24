@@ -2,20 +2,41 @@ let userLocation = null;
 let schoolLocation = { lat: 5.5414, lng: 95.3146 }; // Default
 let maxRadius = 100;
 let weeklySchedule = null;
+let hasAbsenMasuk = false;
+let hasAbsenPulang = false;
 
 document.addEventListener('DOMContentLoaded', () => {
+  const userName = localStorage.getItem('userName') || 'Pegawai';
+  const titleEl = document.getElementById('pemindaianTitle');
+  if (titleEl) {
+    titleEl.innerText = `Pemindaian Wajah (${userName})`;
+  }
+
   initCamera();
   
   App.fetchAPI('getDatabase', {}, 'GET').then(res => {
-    if(res && res.success && res.data.settings) {
-      const s = res.data.settings;
-      if (s.SCHOOL_LAT) schoolLocation.lat = parseFloat(s.SCHOOL_LAT.replace("'", ""));
-      if (s.SCHOOL_LNG) schoolLocation.lng = parseFloat(s.SCHOOL_LNG.replace("'", ""));
-      if (s.MAX_RADIUS_METERS) maxRadius = parseInt(s.MAX_RADIUS_METERS);
-      if (s.WEEKLY_SCHEDULE) {
-        try {
-          weeklySchedule = JSON.parse(s.WEEKLY_SCHEDULE);
-        } catch(e) { console.error(e); }
+    if(res && res.success) {
+      if (res.data.settings) {
+        const s = res.data.settings;
+        if (s.SCHOOL_LAT) schoolLocation.lat = parseFloat(s.SCHOOL_LAT.replace("'", ""));
+        if (s.SCHOOL_LNG) schoolLocation.lng = parseFloat(s.SCHOOL_LNG.replace("'", ""));
+        if (s.MAX_RADIUS_METERS) maxRadius = parseInt(s.MAX_RADIUS_METERS);
+        if (s.WEEKLY_SCHEDULE) {
+          try {
+            weeklySchedule = JSON.parse(s.WEEKLY_SCHEDULE);
+          } catch(e) { console.error(e); }
+        }
+      }
+      if (res.data.attendance) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const userId = localStorage.getItem('userId');
+        res.data.attendance.forEach(a => {
+          const aDate = String(a.timestamp).split(',')[0].split('T')[0];
+          if (a.username === userId && aDate === todayStr) {
+            if (a.status === 'Masuk') hasAbsenMasuk = true;
+            if (a.status === 'Pulang') hasAbsenPulang = true;
+          }
+        });
       }
     }
     initMap();
@@ -129,8 +150,27 @@ function checkReadyState() {
   const isLocationFound = userLocation !== null;
   
   if (isFaceDetected && isLocationFound) {
-    btnMasuk.disabled = false;
-    btnPulang.disabled = false;
+    if (!hasAbsenMasuk) {
+      btnMasuk.disabled = false;
+      btnMasuk.classList.remove('btn-secondary');
+      btnMasuk.classList.add('btn-success');
+    } else {
+      btnMasuk.disabled = true;
+      btnMasuk.classList.remove('btn-success');
+      btnMasuk.classList.add('btn-secondary');
+      btnMasuk.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i> Sudah Masuk';
+    }
+    
+    if (!hasAbsenPulang) {
+      btnPulang.disabled = false;
+      btnPulang.classList.remove('btn-secondary');
+      btnPulang.classList.add('btn-danger');
+    } else {
+      btnPulang.disabled = true;
+      btnPulang.classList.remove('btn-danger');
+      btnPulang.classList.add('btn-secondary');
+      btnPulang.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i> Sudah Pulang';
+    }
   }
 }
 
@@ -174,12 +214,38 @@ function processAbsensi(type, btn) {
       if (scheduleToday.entryStart === "00:00" && scheduleToday.entryEnd === "00:00") {
         keterangan = "Hari Libur";
       } else {
+        const currentMins = now.getHours() * 60 + now.getMinutes();
         if (type === 'Masuk') {
-          const currentMins = now.getHours() * 60 + now.getMinutes();
-          const endParts = scheduleToday.entryEnd.split(':');
-          const endMins = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
-          if (currentMins > endMins) {
+          // Check early, on-time, late for check-in
+          const startParts = (scheduleToday.entryStart || '00:00').split(':');
+          const endParts = (scheduleToday.entryEnd || '00:00').split(':');
+          const tolMins = scheduleToday.entryTol || 0;
+          
+          const startM = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
+          const endM = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
+          
+          if (currentMins < startM) {
+            keterangan = "Terlalu Cepat";
+          } else if (currentMins > endM + tolMins) {
             keterangan = "Terlambat";
+          } else {
+            keterangan = "Tepat Waktu";
+          }
+        } else if (type === 'Pulang') {
+          // Check early, on-time, late for check-out
+          const startParts = (scheduleToday.exitStart || '00:00').split(':');
+          const endParts = (scheduleToday.exitEnd || '00:00').split(':');
+          const tolMins = scheduleToday.exitTol || 0;
+          
+          const startM = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
+          const endM = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
+          
+          if (currentMins < startM) {
+            keterangan = "Pulang Cepat";
+          } else if (currentMins > endM + tolMins) {
+            keterangan = "Terlambat Pulang";
+          } else {
+            keterangan = "Tepat Waktu";
           }
         }
       }

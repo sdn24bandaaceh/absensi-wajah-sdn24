@@ -96,61 +96,14 @@
                 <tr>
                   <th>Hari</th>
                   <th>Status</th>
-                  <th>Jam Masuk</th>
-                  <th>Jam Pulang</th>
+                  <th>Jam Masuk (Mulai - Selesai)</th>
+                  <th>Toleransi (Menit)</th>
+                  <th>Jam Pulang (Mulai - Selesai)</th>
                   <th>Toleransi (Menit)</th>
                 </tr>
               </thead>
-              <tbody>
-                <tr>
-                  <td class="fw-bold">Senin</td>
-                  <td class="text-center"><span class="badge bg-success">Hari Kerja</span></td>
-                  <td><input type="time" class="form-control" value="07:30"></td>
-                  <td><input type="time" class="form-control" value="16:00"></td>
-                  <td><input type="number" class="form-control" value="15"></td>
-                </tr>
-                <tr>
-                  <td class="fw-bold">Selasa</td>
-                  <td class="text-center"><span class="badge bg-success">Hari Kerja</span></td>
-                  <td><input type="time" class="form-control" value="07:30"></td>
-                  <td><input type="time" class="form-control" value="16:00"></td>
-                  <td><input type="number" class="form-control" value="15"></td>
-                </tr>
-                <tr>
-                  <td class="fw-bold">Rabu</td>
-                  <td class="text-center"><span class="badge bg-success">Hari Kerja</span></td>
-                  <td><input type="time" class="form-control" value="07:30"></td>
-                  <td><input type="time" class="form-control" value="16:00"></td>
-                  <td><input type="number" class="form-control" value="15"></td>
-                </tr>
-                <tr>
-                  <td class="fw-bold">Kamis</td>
-                  <td class="text-center"><span class="badge bg-success">Hari Kerja</span></td>
-                  <td><input type="time" class="form-control" value="07:30"></td>
-                  <td><input type="time" class="form-control" value="16:00"></td>
-                  <td><input type="number" class="form-control" value="15"></td>
-                </tr>
-                <tr>
-                  <td class="fw-bold">Jumat</td>
-                  <td class="text-center"><span class="badge bg-success">Hari Kerja</span></td>
-                  <td><input type="time" class="form-control" value="07:30"></td>
-                  <td><input type="time" class="form-control" value="11:30"></td>
-                  <td><input type="number" class="form-control" value="15"></td>
-                </tr>
-                <tr>
-                  <td class="fw-bold">Sabtu</td>
-                  <td class="text-center"><span class="badge bg-danger">Libur</span></td>
-                  <td><input type="time" class="form-control" disabled></td>
-                  <td><input type="time" class="form-control" disabled></td>
-                  <td><input type="number" class="form-control" disabled></td>
-                </tr>
-                <tr>
-                  <td class="fw-bold">Minggu</td>
-                  <td class="text-center"><span class="badge bg-danger">Libur</span></td>
-                  <td><input type="time" class="form-control" disabled></td>
-                  <td><input type="time" class="form-control" disabled></td>
-                  <td><input type="number" class="form-control" disabled></td>
-                </tr>
+              <tbody id="jamKerjaBody">
+                <!-- Diisi via jam-kerja.js -->
               </tbody>
             </table>
           </div>
@@ -171,11 +124,6 @@
   <script src="assets/js/app.js"></script>
   <script src="assets/js/auth.js"></script>
   <script src="assets/js/dashboard.js"></script>
-  <script>
-    document.getElementById('formJamKerja').addEventListener('submit', (e) => {
-      e.preventDefault();
-      App.showToast('Konfigurasi jam kerja berhasil disimpan', 'success');
-    });
-  </script>
+  <script src="assets/js/jam-kerja.js"></script>
 </body>
 </html>

@@ -97,15 +97,15 @@
             <form id="formProfilSekolah">
               <div class="mb-3">
                 <label class="form-label">Nama Sekolah</label>
-                <input type="text" class="form-control form-control-md3" value="SD Negeri 24 Banda Aceh">
+                <input type="text" class="form-control form-control-md3" id="profilNama" value="SD Negeri 24 Banda Aceh">
               </div>
               <div class="mb-3">
                 <label class="form-label">Alamat</label>
-                <textarea class="form-control form-control-md3" rows="3">Jl. Contoh Alamat No. 123, Banda Aceh</textarea>
+                <textarea class="form-control form-control-md3" id="profilAlamat" rows="3">Jl. Contoh Alamat No. 123, Banda Aceh</textarea>
               </div>
               <div class="mb-3">
                 <label class="form-label">Kepala Sekolah</label>
-                <input type="text" class="form-control form-control-md3" value="Nama Kepala Sekolah, M.Pd">
+                <input type="text" class="form-control form-control-md3" id="profilKepsek" value="Nama Kepala Sekolah, M.Pd">
               </div>
               <button type="submit" class="btn btn-primary-custom hover-scale">Simpan Profil</button>
             </form>
@@ -126,7 +126,7 @@
               </div>
               <div class="mb-4">
                 <label class="form-label">Model Akurasi AI (Treshold)</label>
-                <input type="range" class="form-range" min="0.5" max="0.9" step="0.1" value="0.7">
+                <input type="range" class="form-range" id="aiThreshold" min="0.5" max="0.9" step="0.1" value="0.7">
                 <div class="text-muted small">Semakin tinggi nilai, semakin ketat pencocokan wajah. Rekomendasi: 0.7</div>
               </div>
               <button type="submit" class="btn btn-primary-custom hover-scale">Simpan Pengaturan</button>
@@ -143,16 +143,6 @@
   
   <script src="assets/js/app.js"></script>
   <script src="assets/js/auth.js"></script>
-  <script src="assets/js/dashboard.js"></script>
-  <script>
-    document.getElementById('formProfilSekolah').addEventListener('submit', (e) => {
-      e.preventDefault();
-      App.showToast('Profil sekolah diperbarui', 'success');
-    });
-    document.getElementById('formAppConfig').addEventListener('submit', (e) => {
-      e.preventDefault();
-      App.showToast('Pengaturan aplikasi diperbarui', 'success');
-    });
-  </script>
+  <script src="assets/js/pengaturan.js"></script>
 </body>
 </html>

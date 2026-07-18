@@ -12,7 +12,7 @@ const App = {
   async fetchAPI(action, payload = {}, method = 'POST') {
     try {
       if (method === 'GET') {
-        const queryParams = new URLSearchParams({ action, ...payload }).toString();
+        const queryParams = new URLSearchParams({ action, ...payload, _t: Date.now() }).toString();
         const response = await fetch(`${this.API_URL}?${queryParams}`);
         return await response.json();
       } else {
