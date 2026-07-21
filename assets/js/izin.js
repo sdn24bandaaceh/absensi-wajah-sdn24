@@ -27,9 +27,15 @@ $(document).ready(function() {
           else statusBadge = `<span class="badge bg-danger"><i class="bi bi-x me-1"></i> ${p.status}</span>`;
           
           let actions = `<button class="btn btn-sm btn-light" onclick="viewPermit('${p.fileData}')"><i class="bi bi-eye"></i></button>`;
-          if (p.status.includes('Menunggu') && role !== 'admin') {
-             // Opsional: fungsionalitas batalkan izin
-             actions += ` <button class="btn btn-sm btn-danger text-white" disabled title="Hanya admin yang bisa menghapus"><i class="bi bi-trash"></i></button>`;
+          if (p.status.includes('Menunggu')) {
+             if (role === 'admin') {
+               actions += `
+                 <button class="btn btn-sm btn-success ms-1" onclick="updateStatus('${p.id}', 'Disetujui')" title="Setujui"><i class="bi bi-check-lg"></i></button>
+                 <button class="btn btn-sm btn-danger ms-1" onclick="updateStatus('${p.id}', 'Ditolak')" title="Tolak"><i class="bi bi-x-lg"></i></button>
+               `;
+             } else {
+               actions += ` <button class="btn btn-sm btn-danger text-white ms-1" disabled title="Menunggu admin"><i class="bi bi-trash"></i></button>`;
+             }
           }
           
           // Tanggal Mulai dan Selesai
@@ -117,4 +123,30 @@ window.viewPermit = function(url) {
   } else {
      Swal.fire('Info', 'File tidak tersedia atau masih dalam proses', 'info');
   }
+};
+
+window.updateStatus = function(id, newStatus) {
+  Swal.fire({
+    title: 'Konfirmasi',
+    text: `Anda yakin ingin menandai pengajuan izin ini sebagai "${newStatus}"?`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Lanjutkan',
+    cancelButtonText: 'Batal'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      Swal.fire({ title: 'Memproses...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+      App.fetchAPI('updatePermitStatus', { id: id, status: newStatus }, 'POST')
+        .then(res => {
+          if (res && res.success) {
+             Swal.fire('Berhasil!', res.message, 'success').then(() => {
+                location.reload();
+             });
+          } else {
+             Swal.fire('Gagal', res.message || 'Terjadi kesalahan', 'error');
+          }
+        })
+        .catch(err => Swal.fire('Error', 'Koneksi bermasalah', 'error'));
+    }
+  });
 };

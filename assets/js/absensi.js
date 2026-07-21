@@ -149,11 +149,20 @@ function checkReadyState() {
   const isFaceDetected = statusBadge && statusBadge.classList.contains('bg-success');
   const isLocationFound = userLocation !== null;
   
-  if (isFaceDetected && isLocationFound) {
+  let isWithinRadius = false;
+  if (isLocationFound) {
+    const schoolLatLng = L.latLng(schoolLocation.lat, schoolLocation.lng);
+    const userLatLng = L.latLng(userLocation.lat, userLocation.lng);
+    const distance = userLatLng.distanceTo(schoolLatLng);
+    isWithinRadius = distance <= maxRadius;
+  }
+  
+  if (isFaceDetected && isLocationFound && isWithinRadius) {
     if (!hasAbsenMasuk) {
       btnMasuk.disabled = false;
       btnMasuk.classList.remove('btn-secondary');
       btnMasuk.classList.add('btn-success');
+      btnMasuk.innerHTML = '<i class="bi bi-box-arrow-in-right me-2"></i> Absen Masuk';
     } else {
       btnMasuk.disabled = true;
       btnMasuk.classList.remove('btn-success');
@@ -165,11 +174,33 @@ function checkReadyState() {
       btnPulang.disabled = false;
       btnPulang.classList.remove('btn-secondary');
       btnPulang.classList.add('btn-danger');
+      btnPulang.innerHTML = '<i class="bi bi-box-arrow-right me-2"></i> Absen Pulang';
     } else {
       btnPulang.disabled = true;
       btnPulang.classList.remove('btn-danger');
       btnPulang.classList.add('btn-secondary');
       btnPulang.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i> Sudah Pulang';
+    }
+  } else {
+    if (btnMasuk && !hasAbsenMasuk) {
+      btnMasuk.disabled = true;
+      btnMasuk.classList.remove('btn-success');
+      btnMasuk.classList.add('btn-secondary');
+      if (isLocationFound && !isWithinRadius) {
+        btnMasuk.innerHTML = '<i class="bi bi-geo-alt-fill me-2"></i> Di Luar Area Sekolah';
+      } else {
+        btnMasuk.innerHTML = '<i class="bi bi-box-arrow-in-right me-2"></i> Absen Masuk';
+      }
+    }
+    if (btnPulang && !hasAbsenPulang) {
+      btnPulang.disabled = true;
+      btnPulang.classList.remove('btn-danger');
+      btnPulang.classList.add('btn-secondary');
+      if (isLocationFound && !isWithinRadius) {
+        btnPulang.innerHTML = '<i class="bi bi-geo-alt-fill me-2"></i> Di Luar Area Sekolah';
+      } else {
+        btnPulang.innerHTML = '<i class="bi bi-box-arrow-right me-2"></i> Absen Pulang';
+      }
     }
   }
 }
@@ -201,6 +232,13 @@ function processAbsensi(type, btn) {
     const schoolLatLng = L.latLng(schoolLocation.lat, schoolLocation.lng);
     const userLatLng = L.latLng(userLocation.lat, userLocation.lng);
     distance = userLatLng.distanceTo(schoolLatLng);
+  }
+  
+  if (distance > maxRadius) {
+    App.showToast('Gagal: Anda berada di luar radius sekolah!', 'error');
+    btn.innerHTML = originalHtml;
+    btn.disabled = true;
+    return;
   }
   
   // Calculate On-Time / Late / Holiday based on Schedule

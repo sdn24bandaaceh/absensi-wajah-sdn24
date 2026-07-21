@@ -132,7 +132,4 @@ body.dark-mode .stat-details p {
   .main-content {
     margin-left: 0;
   }
-  .main-content.sidebar-open {
-    margin-left: 280px;
-  }
 }

@@ -112,6 +112,12 @@ function setupDatabase() {
       threshold: 0.7
     };
     sheetSettings.appendRow(["APP_CONFIG", JSON.stringify(defaultAppConfig)]);
+    
+    const defaultAnnouncements = [
+      { id: 1, title: 'Rapat Evaluasi Bulanan', content: 'Diharapkan kehadiran seluruh dewan guru pada hari Jumat, pukul 14:00 WIB di Ruang Rapat.', type: 'info', date: new Date().toISOString() },
+      { id: 2, title: 'Pembaruan Sistem', content: 'Aplikasi Absensi Wajah telah diperbarui ke versi Enterprise 2026. Mohon izinkan akses lokasi dan kamera.', type: 'success', date: new Date().toISOString() }
+    ];
+    sheetSettings.appendRow(["ANNOUNCEMENTS", JSON.stringify(defaultAnnouncements)]);
   }
 
   Logger.log("Database berhasil disetup! Silakan lanjutkan dengan menyiapkan endpoint doPost / doGet.");
@@ -379,6 +385,28 @@ function doPost(e) {
       return output.setContent(JSON.stringify({ success: true, message: "Pengajuan izin berhasil dikirim." }));
     }
     
+    // --- AKSI: UPDATE PERMIT STATUS (updatePermitStatus) ---
+    if (action === "updatePermitStatus") {
+      const sheet = ss.getSheetByName(SHEET_PERMITS);
+      const data = sheet.getDataRange().getValues();
+      const targetId = parseInt(payload.id);
+      
+      let foundIndex = -1;
+      for (let i = 1; i < data.length; i++) {
+        if (parseInt(data[i][0]) === targetId) {
+          foundIndex = i + 1;
+          break;
+        }
+      }
+      
+      if (foundIndex !== -1) {
+        sheet.getRange(foundIndex, 8).setValue(payload.status);
+        return output.setContent(JSON.stringify({ success: true, message: "Status izin berhasil diperbarui." }));
+      } else {
+        return output.setContent(JSON.stringify({ success: false, message: "Data izin tidak ditemukan." }));
+      }
+    }
+
     // --- AKSI: UPDATE SETTINGS (updateSettings) ---
     if (action === "updateSettings") {
       const sheet = ss.getSheetByName(SHEET_SETTINGS);

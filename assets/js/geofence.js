@@ -48,6 +48,50 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   }
+  
+  const btnGetCurrentLocation = document.getElementById('btnGetCurrentLocation');
+  if (btnGetCurrentLocation) {
+    btnGetCurrentLocation.addEventListener('click', () => {
+      const originalHtml = btnGetCurrentLocation.innerHTML;
+      btnGetCurrentLocation.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Mencari...';
+      btnGetCurrentLocation.disabled = true;
+
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            
+            document.getElementById('inputLat').value = lat.toFixed(6);
+            document.getElementById('inputLng').value = lng.toFixed(6);
+            
+            if (typeof marker !== 'undefined' && marker && typeof circle !== 'undefined' && circle && typeof mapConfig !== 'undefined' && mapConfig) {
+              const newPos = [lat, lng];
+              marker.setLatLng(newPos);
+              circle.setLatLng(newPos);
+              mapConfig.setView(newPos, 16);
+            }
+            
+            btnGetCurrentLocation.innerHTML = originalHtml;
+            btnGetCurrentLocation.disabled = false;
+            App.showToast('Lokasi terkini berhasil didapatkan', 'success');
+          },
+          (error) => {
+            btnGetCurrentLocation.innerHTML = originalHtml;
+            btnGetCurrentLocation.disabled = false;
+            let msg = 'Gagal mendapatkan lokasi';
+            if (error.code === error.PERMISSION_DENIED) msg = 'Akses lokasi ditolak oleh browser';
+            App.showToast(msg, 'error');
+          },
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
+      } else {
+        btnGetCurrentLocation.innerHTML = originalHtml;
+        btnGetCurrentLocation.disabled = false;
+        App.showToast('Browser Anda tidak mendukung GPS', 'error');
+      }
+    });
+  }
 });
 
 let mapConfig;
