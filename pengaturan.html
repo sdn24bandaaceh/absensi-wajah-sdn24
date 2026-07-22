@@ -65,6 +65,9 @@
         <li class="nav-item">
           <a class="nav-link active" href="pengaturan.html"><i class="bi bi-gear-fill"></i> Pengaturan Sistem</a>
         </li>
+        <li class="nav-item d-none" id="menuProfilSekolah">
+          <a class="nav-link" href="pengaturan.html"><i class="bi bi-building"></i> Profil Sekolah</a>
+        </li>
         <li class="nav-item">
           <a class="nav-link" href="#" onclick="logout()"><i class="bi bi-box-arrow-left text-danger"></i> Logout</a>
         </li>
@@ -91,23 +94,57 @@
 
     <div class="container-fluid p-0">
       <div class="row g-4">
-        <div class="col-12 col-lg-6" data-aos="fade-up">
+        <div class="col-12 col-lg-6" data-aos="fade-up" id="panelProfilSekolah">
           <div class="glass-card p-4 h-100">
-            <h5 class="fw-bold mb-4">Profil Sekolah</h5>
+            <h5 class="fw-bold mb-4">Profil Sekolah (Super Admin)</h5>
             <form id="formProfilSekolah">
               <div class="mb-3">
                 <label class="form-label">Nama Sekolah</label>
-                <input type="text" class="form-control form-control-md3" id="profilNama" value="SD Negeri 24 Banda Aceh">
+                <input type="text" class="form-control form-control-md3" id="profilNama" value="SD Negeri 24 Banda Aceh" required>
               </div>
               <div class="mb-3">
-                <label class="form-label">Alamat</label>
-                <textarea class="form-control form-control-md3" id="profilAlamat" rows="3">Jl. Contoh Alamat No. 123, Banda Aceh</textarea>
+                <label class="form-label">Alamat Lengkap</label>
+                <textarea class="form-control form-control-md3" id="profilAlamat" rows="2" required>Jl. Contoh Alamat No. 123, Banda Aceh</textarea>
+              </div>
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label class="form-label">Tingkat Pendidikan</label>
+                  <select class="form-select" id="profilTingkat">
+                    <option value="SD">SD</option>
+                    <option value="SMP">SMP</option>
+                    <option value="SMA">SMA</option>
+                    <option value="SMK">SMK</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Status Sekolah</label>
+                  <select class="form-select" id="profilStatus">
+                    <option value="Negeri">Negeri</option>
+                    <option value="Swasta">Swasta</option>
+                  </select>
+                </div>
               </div>
               <div class="mb-3">
-                <label class="form-label">Kepala Sekolah</label>
-                <input type="text" class="form-control form-control-md3" id="profilKepsek" value="Nama Kepala Sekolah, M.Pd">
+                <label class="form-label">Logo Sekolah (PNG/JPG)</label>
+                <input type="file" class="form-control" id="profilLogo" accept="image/png, image/jpeg">
+                <small class="text-muted">Biarkan kosong jika tidak ingin mengubah logo saat ini.</small>
               </div>
-              <button type="submit" class="btn btn-primary-custom hover-scale">Simpan Profil</button>
+              <div class="mb-3">
+                <label class="form-label">Kop Surat (PNG transparan memanjang)</label>
+                <input type="file" class="form-control" id="profilKopSurat" accept="image/png">
+                <small class="text-muted">Kop surat akan digunakan pada cetakan laporan PDF.</small>
+              </div>
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label class="form-label">Kepala Sekolah</label>
+                  <input type="text" class="form-control form-control-md3" id="profilKepsek" value="Nama Kepala Sekolah, M.Pd" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">NIP Kepala Sekolah</label>
+                  <input type="text" class="form-control form-control-md3" id="profilNipKepsek" value="19790220 200504 1 001">
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary-custom hover-scale mt-2 w-100">Simpan Profil Sekolah</button>
             </form>
           </div>
         </div>

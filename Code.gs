@@ -29,8 +29,19 @@ function setupDatabase() {
   // Format tampilan Header Users
   formatHeader(sheetUsers, userHeaders.length);
 
-  // Sisipkan satu data Admin default jika belum ada data
+  // Sisipkan data default jika belum ada data
   if (sheetUsers.getLastRow() === 1) {
+    sheetUsers.appendRow([
+      "https://placehold.co/100x100/dc2626/white?text=Super", 
+      "Super Administrator", 
+      "-", 
+      "-", 
+      "Pemilik Sistem", 
+      "-", 
+      "superadmin", 
+      "super2026", 
+      "superadmin"
+    ]);
     sheetUsers.appendRow([
       "https://placehold.co/100x100/3b82f6/white?text=Admin", 
       "Hidayat, S.Pd., M.Pd.", 
@@ -40,7 +51,7 @@ function setupDatabase() {
       "PNS", 
       "admin", 
       "admin2026", 
-      "Admin"
+      "admin"
     ]);
   }
 
@@ -102,7 +113,12 @@ function setupDatabase() {
     const defaultProfile = {
       nama: 'SD Negeri 24 Banda Aceh',
       alamat: 'Jl. Contoh Alamat No. 123, Banda Aceh',
-      kepsek: 'Hidayat, S.Pd., M.Pd.'
+      tingkat: 'SD',
+      status: 'Negeri',
+      logo: '',
+      kepsek: 'Hidayat, S.Pd., M.Pd.',
+      nipKepsek: '19790220 200504 1 001',
+      kopSurat: ''
     };
     sheetSettings.appendRow(["SCHOOL_PROFILE", JSON.stringify(defaultProfile)]);
     
@@ -121,6 +137,45 @@ function setupDatabase() {
   }
 
   Logger.log("Database berhasil disetup! Silakan lanjutkan dengan menyiapkan endpoint doPost / doGet.");
+}
+
+/**
+ * Fungsi utilitas untuk membuat akun Super Admin secara paksa
+ * Jalankan fungsi ini jika Anda sudah memiliki data pegawai sebelumnya 
+ * namun belum memiliki akun superadmin.
+ */
+function createSuperAdmin() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetUsers = ss.getSheetByName(SHEET_USERS);
+  
+  if (!sheetUsers) {
+    Logger.log("Error: Sheet Users tidak ditemukan. Jalankan setupDatabase() terlebih dahulu.");
+    return;
+  }
+  
+  // Cek apakah superadmin sudah ada
+  const data = sheetUsers.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][6] === 'superadmin') {
+      Logger.log("Akun superadmin sudah ada di dalam database.");
+      return;
+    }
+  }
+  
+  // Jika belum ada, tambahkan
+  sheetUsers.appendRow([
+    "https://placehold.co/100x100/dc2626/white?text=Super", 
+    "Super Administrator", 
+    "-", 
+    "-", 
+    "Pemilik Sistem", 
+    "-", 
+    "superadmin", 
+    "super2026", 
+    "superadmin"
+  ]);
+  
+  Logger.log("Akun superadmin berhasil ditambahkan!");
 }
 
 /**
@@ -170,12 +225,24 @@ function doGet(e) {
             jabatan: row[4],
             status: row[5],
             username: row[6],
-            role: row[8]
+            role: row[8].toLowerCase()
           };
+          let schoolProfile = {};
+          const sheetSettings = ss.getSheetByName(SHEET_SETTINGS);
+          if (sheetSettings) {
+            const settingsData = sheetSettings.getDataRange().getValues();
+            for (let j = 1; j < settingsData.length; j++) {
+              if (settingsData[j][0] === 'SCHOOL_PROFILE') {
+                try { schoolProfile = JSON.parse(settingsData[j][1]); } catch(e){}
+                break;
+              }
+            }
+          }
           
           return output.setContent(JSON.stringify({
             success: true,
-            user: userObj
+            user: userObj,
+            schoolProfile: schoolProfile
           }));
         }
       }
@@ -321,6 +388,9 @@ function doPost(e) {
 
     // --- AKSI: DELETE USER (deleteUser) ---
     if (action === "deleteUser") {
+      if (payload.username === 'admin' || payload.username === 'superadmin') {
+        return output.setContent(JSON.stringify({ success: false, message: "Akses Ditolak: Akun utama tidak dapat dihapus." }));
+      }
       const sheet = ss.getSheetByName(SHEET_USERS);
       const data = sheet.getDataRange().getValues();
       
@@ -336,13 +406,108 @@ function doPost(e) {
     // --- AKSI: SUBMIT ATTENDANCE (submitAttendance) ---
     if (action === "submitAttendance") {
       const sheet = ss.getSheetByName(SHEET_ATTENDANCE);
-      const now = new Date();
-      // Format tanggal yang rapi
-      const timestamp = now.toISOString().slice(0, 10) + ", " + now.toLocaleTimeString('id-ID');
+      const sheetSettings = ss.getSheetByName(SHEET_SETTINGS);
+      const settingsData = sheetSettings.getDataRange().getValues();
+      
+      let schoolLat = 5.5414;
+      let schoolLng = 95.3146;
+      let maxRadius = 100;
+      let weeklySchedule = null;
+      let holidays = [];
+      
+      for (let i = 1; i < settingsData.length; i++) {
+        const key = settingsData[i][0];
+        const val = settingsData[i][1];
+        if (key === 'SCHOOL_LAT') schoolLat = parseFloat(val.toString().replace("'", ""));
+        if (key === 'SCHOOL_LNG') schoolLng = parseFloat(val.toString().replace("'", ""));
+        if (key === 'MAX_RADIUS_METERS') maxRadius = parseInt(val);
+        if (key === 'WEEKLY_SCHEDULE') {
+          try { weeklySchedule = JSON.parse(val); } catch(e) {}
+        }
+        if (key === 'HOLIDAYS') {
+          try { holidays = JSON.parse(val); } catch(e) {}
+        }
+      }
+      
+      // Hitung Jarak (Server-side Haversine Formula)
+      let calculatedDistance = "Tidak diketahui";
+      let isOutsideRadius = false;
+      if (payload.userLat && payload.userLng) {
+        const r = 6371e3; // Radius bumi dalam meter
+        const lat1 = schoolLat * Math.PI/180;
+        const lat2 = payload.userLat * Math.PI/180;
+        const deltaLat = (payload.userLat - schoolLat) * Math.PI/180;
+        const deltaLng = (payload.userLng - schoolLng) * Math.PI/180;
+        
+        const a = Math.sin(deltaLat/2) * Math.sin(deltaLat/2) +
+                  Math.cos(lat1) * Math.cos(lat2) *
+                  Math.sin(deltaLng/2) * Math.sin(deltaLng/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const distance = r * c;
+        calculatedDistance = Math.round(distance) + "m";
+        if (distance > maxRadius) {
+          isOutsideRadius = true;
+        }
+      }
+      
+      if (isOutsideRadius) {
+        return output.setContent(JSON.stringify({ success: false, message: "Gagal: Lokasi Anda (" + calculatedDistance + ") di luar radius sekolah." }));
+      }
+      
+      // Kalkulasi Waktu Server (GMT+7)
+      const serverTimeStr = new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"});
+      const serverDate = new Date(serverTimeStr);
+      const dayOfWeek = serverDate.getDay();
+      const currentMins = serverDate.getHours() * 60 + serverDate.getMinutes();
+      const todayIso = serverDate.getFullYear() + "-" + String(serverDate.getMonth()+1).padStart(2, '0') + "-" + String(serverDate.getDate()).padStart(2, '0');
+      const currentTimeStr = String(serverDate.getHours()).padStart(2, '0') + ":" + String(serverDate.getMinutes()).padStart(2, '0') + ":" + String(serverDate.getSeconds()).padStart(2, '0');
+      const timestamp = todayIso + ", " + currentTimeStr;
+      
+      // Cek Libur
+      let isHoliday = false;
+      for (const hol of holidays) {
+        const hStart = hol.startDate || hol.date;
+        const hEnd = hol.endDate || hStart;
+        if (todayIso >= hStart && todayIso <= hEnd) {
+          isHoliday = true;
+          break;
+        }
+      }
+      
+      // Tentukan Keterangan
+      let keterangan = "Tepat Waktu";
+      if (isHoliday) {
+        keterangan = "Hari Libur";
+      } else if (weeklySchedule && weeklySchedule[dayOfWeek]) {
+        const scheduleToday = weeklySchedule[dayOfWeek];
+        if (scheduleToday.entryStart === "00:00" && scheduleToday.entryEnd === "00:00") {
+          keterangan = "Hari Libur";
+        } else {
+          if (payload.status === 'Masuk') {
+            const startParts = (scheduleToday.entryStart || '00:00').split(':');
+            const endParts = (scheduleToday.entryEnd || '00:00').split(':');
+            const tolMins = parseInt(scheduleToday.entryTol || 0);
+            const startM = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
+            const endM = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
+            
+            if (currentMins < startM) keterangan = "Terlalu Cepat";
+            else if (currentMins > endM + tolMins) keterangan = "Terlambat";
+          } else if (payload.status === 'Pulang') {
+            const startParts = (scheduleToday.exitStart || '00:00').split(':');
+            const endParts = (scheduleToday.exitEnd || '00:00').split(':');
+            const tolMins = parseInt(scheduleToday.exitTol || 0);
+            const startM = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
+            const endM = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
+            
+            if (currentMins < startM) keterangan = "Pulang Cepat";
+            else if (currentMins > endM + tolMins) keterangan = "Terlambat Pulang";
+          }
+        }
+      }
       
       let photoUrl = payload.photo || "";
       if (photoUrl.startsWith("data:image")) {
-         const fileName = "Absen_" + (payload.username || payload.user_id || "User") + "_" + now.getTime() + ".png";
+         const fileName = "Absen_" + (payload.username || payload.user_id || "User") + "_" + serverDate.getTime() + ".png";
          photoUrl = saveBase64ToDrive(photoUrl, "Absensi_Photos_SDN24", fileName);
       }
       
@@ -351,8 +516,8 @@ function doPost(e) {
         payload.username || payload.user_id || "",
         payload.nama || "",
         payload.status || "",
-        payload.keterangan || "-", // Keterangan tambahan (Tepat Waktu/Terlambat)
-        payload.jarak || "",
+        keterangan,
+        calculatedDistance,
         photoUrl
       ]);
       return output.setContent(JSON.stringify({ success: true, message: "Absensi berhasil dicatat." }));
@@ -407,6 +572,41 @@ function doPost(e) {
       }
     }
 
+    // --- AKSI: ADD ANNOUNCEMENT (addAnnouncement) ---
+    if (action === "addAnnouncement") {
+      const sheet = ss.getSheetByName(SHEET_SETTINGS);
+      const data = sheet.getDataRange().getValues();
+      let foundIndex = -1;
+      let announcements = [];
+      
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][0] === 'ANNOUNCEMENTS') {
+          foundIndex = i + 1;
+          try {
+            announcements = JSON.parse(data[i][1]);
+          } catch(e) {}
+          break;
+        }
+      }
+      
+      const newItem = {
+        title: payload.title,
+        content: payload.content,
+        type: payload.type,
+        date: new Date().toISOString()
+      };
+      
+      announcements.unshift(newItem); // Tambah ke paling atas
+      
+      if (foundIndex !== -1) {
+        sheet.getRange(foundIndex, 2).setValue(JSON.stringify(announcements));
+      } else {
+        sheet.appendRow(['ANNOUNCEMENTS', JSON.stringify(announcements)]);
+      }
+      
+      return output.setContent(JSON.stringify({ success: true, message: "Pengumuman berhasil ditambahkan." }));
+    }
+
     // --- AKSI: UPDATE SETTINGS (updateSettings) ---
     if (action === "updateSettings") {
       const sheet = ss.getSheetByName(SHEET_SETTINGS);
@@ -441,6 +641,40 @@ function doPost(e) {
       });
       
       return output.setContent(JSON.stringify({ success: true, message: "Pengaturan sistem berhasil diperbarui." }));
+    }
+
+    // --- AKSI: UPDATE SCHOOL PROFILE (updateSchoolProfile) ---
+    if (action === "updateSchoolProfile") {
+      const sheet = ss.getSheetByName(SHEET_SETTINGS);
+      const data = sheet.getDataRange().getValues();
+      let foundIndex = -1;
+      
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][0] === 'SCHOOL_PROFILE') {
+          foundIndex = i + 1;
+          break;
+        }
+      }
+      
+      let profile = payload.profile;
+      
+      // Save logo if base64
+      if (profile.logo && profile.logo.startsWith("data:image")) {
+         profile.logo = saveBase64ToDrive(profile.logo, "Pengaturan_Sekolah", "Logo_" + new Date().getTime() + ".png");
+      }
+      
+      // Save kopSurat if base64
+      if (profile.kopSurat && profile.kopSurat.startsWith("data:image")) {
+         profile.kopSurat = saveBase64ToDrive(profile.kopSurat, "Pengaturan_Sekolah", "Kop_" + new Date().getTime() + ".png");
+      }
+      
+      if (foundIndex !== -1) {
+        sheet.getRange(foundIndex, 2).setValue(JSON.stringify(profile));
+      } else {
+        sheet.appendRow(['SCHOOL_PROFILE', JSON.stringify(profile)]);
+      }
+      
+      return output.setContent(JSON.stringify({ success: true, message: "Profil sekolah berhasil diperbarui." }));
     }
 
     return output.setContent(JSON.stringify({ success: false, message: "Aksi tidak dikenali." }));
@@ -481,6 +715,9 @@ function saveBase64ToDrive(base64Data, folderName, fileName) {
     
     // Menyimpan file ke dalam folder
     const file = targetFolder.createFile(blob);
+    
+    // Pastikan file itu sendiri bisa diakses publik
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     
     // Mengembalikan URL download / view file
     return file.getUrl();

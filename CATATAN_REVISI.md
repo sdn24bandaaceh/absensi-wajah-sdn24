@@ -68,3 +68,44 @@ Dokumen ini berisi daftar perubahan, perbaikan *bug*, dan penambahan fitur yang 
 *   **Masalah:** Format laporan sebelumnya menggabungkan seluruh aktivitas absen (masuk/pulang) dalam satu kolom secara berderet ke bawah per hari, sehingga tabel menjadi terlalu panjang.
 *   **File yang diubah:** `riwayat.html`, `assets/js/riwayat.js`
 *   **Solusi:** Merombak struktur generator tabel agar memisahkan waktu absen menjadi dua kolom spesifik: **Absen Masuk** dan **Absen Pulang**. Keterangan status seperti "Hari Libur" atau "Izin/Cuti" akan dicetak melebar membentangi kedua kolom waktu tersebut, membuat laporan menjadi sangat rapi (satu baris per tanggal).
+
+---
+
+## [22 Juli 2026] - Penambalan Celah Keamanan & Pemindahan Logika ke Server
+
+### 11. Perlindungan Akun Admin Utama
+*   **Masalah:** Akun admin utama (`admin`) rentan terhapus jika seseorang menembak API penghapusan melalui console, meskipun tombol hapus disembunyikan di antarmuka.
+*   **File yang diubah:** `Code.gs`
+*   **Solusi:** Menambahkan perlindungan di tingkat server pada *endpoint* `deleteUser`. Jika `payload.username === 'admin'`, server akan langsung menolak dan mengembalikan pesan "Akses Ditolak".
+
+### 12. Pemindahan Logika Kehadiran (Waktu & Jarak) ke Sisi Server
+*   **Masalah:** Sistem sangat bergantung pada waktu dan titik GPS dari perangkat klien (HP/Laptop pengguna). Pengguna dapat dengan mudah memanipulasi waktu lokal perangkat (jam) atau menggunakan *Fake GPS* untuk mengelabui jarak (Geofencing) dan status (Tepat Waktu/Terlambat).
+*   **File yang diubah:** `Code.gs`, `assets/js/absensi.js`
+*   **Solusi:** 
+    * Klien (`absensi.js`) tidak lagi melakukan kalkulasi terlambat atau tepat waktu. Klien hanya bertugas mengirimkan status tombol yang ditekan (Masuk/Pulang), lokasi saat ini (Latitude/Longitude), dan foto.
+    * Server (`Code.gs`) mengambil alih perhitungan jarak (menggunakan formula *Haversine*) berdasarkan konfigurasi titik koordinat sekolah yang tersimpan di *database*.
+    * Server juga menggunakan jam server (Google Servers) dengan zona waktu Asia/Jakarta (GMT+7) untuk menentukan apakah pegawai terlambat, terlalu cepat, atau tepat waktu, dengan mencocokkan jadwal absensi mingguan.
+
+### 13. Perbaikan Bug Timpa-Menimpa Pengumuman (Race Condition)
+*   **Masalah:** Pengumuman ditambahkan di klien lalu disatukan ke *array* dan dikirim ulang seluruhnya menimpa konfigurasi *database* (`updateSettings`). Jika ada dua admin yang melakukannya berdekatan waktu, data akan saling menimpa.
+*   **File yang diubah:** `Code.gs`, `assets/js/dashboard.js`
+*   **Solusi:** Membuat perintah spesifik baru `addAnnouncement` pada `doPost` di `Code.gs`. Admin hanya mengirimkan 1 pengumuman baru ke server. Server yang akan mengambil data lama, menyisipkan data baru, lalu menyimpannya, sehingga risiko timpa-menimpa dapat dihindari.
+
+### 14. Pembaruan Opsi B: Arsitektur Template & Super Admin
+*   **Masalah:** Kebutuhan untuk merencanakan pengelolaan banyak sekolah di masa depan membutuhkan fondasi arsitektur "Template" (Opsi B) agar setiap sekolah memiliki profil dan konfigurasi sendiri-sendiri tanpa mencampur data absensi (yang rawan membebani Google Sheets).
+*   **File yang diubah:** `Code.gs`, `pengaturan.html`, `assets/js/pengaturan.js`, `assets/js/dashboard.js`, `assets/js/laporan.js`, `assets/js/riwayat.js`
+*   **Solusi:**
+    *   **Akun Super Admin:** Menambahkan pembuatan akun *default* `superadmin` pada saat inisialisasi *database* pertama kali (`setupDatabase`). Perlindungan *deleteUser* di server juga diperbarui untuk memblokir penghapusan akun `superadmin`.
+    *   **Menu Profil Sekolah:** Menambahkan modul *Profil Sekolah* pada halaman Pengaturan (hanya terlihat oleh akun Super Admin). Modul ini mengelola: Nama Sekolah, Alamat, Tingkat Pendidikan, Status, Logo, Kop Surat, Nama Kepsek, dan NIP Kepsek.
+    *   **Pengolahan Gambar Base64:** Fitur unggah (Upload) logo dan kop surat diproses secara asinkron menggunakan format `Base64` dari *client* (browser) lalu dikirim ke *endpoint* khusus `updateSchoolProfile` di `Code.gs` untuk dikonversi menjadi *file* dan disimpan di Google Drive.
+    *   **Integrasi PDF Dinamis:** *Output* generator cetak PDF pada modul Laporan (`laporan.js`) dan Riwayat (`riwayat.js`) kini me-*load* seluruh konfigurasi nama, logo, kop, dan Tanda Tangan Kepsek secara *real-time* dari *database*.
+
+### 15. Perbaikan Bug Hak Akses Super Admin & Rendering Logo
+*   **Masalah:** Saat login menggunakan akun `superadmin`, sistem sebelumnya gagal mendeteksi *role* secara benar, menyebabkan fitur manajemen hilang. Selain itu, gambar logo dan kop surat yang tersimpan di Google Drive tampil patah (broken) baik pada UI maupun pratinjau cetak karena format URL tidak valid untuk elemen gambar, serta masalah perizinan berkas (permissions). Menu "Profil Sekolah" juga belum tersedia di Sidebar navigasi utama.
+*   **File yang diubah:** `Code.gs`, `assets/js/auth.js`, `assets/js/app.js`, `assets/js/dashboard.js`, `assets/js/pengaturan.js`, `assets/js/laporan.js`, `assets/js/riwayat.js`, dan 13 file HTML.
+*   **Solusi:**
+    *   **Perbaikan Role:** Menyesuaikan logika autentikasi di `auth.js` agar langsung mengenali dan menangani peran `superadmin`.
+    *   **Injeksi Sidebar Dinamis:** Memasukkan elemen *Profil Sekolah* ke seluruh 13 *file* HTML sebagai menu *sidebar* utama, dilengkapi skrip yang otomatis menyembunyikan/menampilkan fitur tersebut sesuai dengan hak akses (hanya untuk `superadmin`).
+    *   **Realtime DOM Update:** Fungsi baru `applySchoolProfile()` di `app.js` ditambahkan. Sekarang nama sekolah dan logo pada Sidebar (semua halaman) maupun layar utama Login akan diperbarui secara otomatis begitu halaman dimuat (dari *localStorage*). Modul Pengaturan juga dipaksa agar selalu merender ulang setelan UI setelah pengguna menekan "Simpan Profil".
+    *   **Penanganan URL Gambar Google Drive:** Mengubah sistem pembacaan *Drive ID* menggunakan format URL tipe `thumbnail` agar gambar kebal terhadap pemblokiran pihak ketiga. Komponen cetak Laporan Harian dan Rekapitulasi kini mengeksekusi konversi URL gambar pada logo dan kop surat sebelum merendernya.
+    *   **File Permission Override:** Memaksa parameter setSharing `ANYONE_WITH_LINK` (Public View) pada script `Code.gs` saat menyisipkan *blob* logo/kop surat secara langsung ke tiap berkas Google Drive untuk menjamin gambar bisa ditayangkan secara *online* tanpa login akun Google.

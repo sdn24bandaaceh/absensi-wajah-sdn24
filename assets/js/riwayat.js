@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let allAttendance = [];
   let allPermits = [];
   let holidays = [];
+  let schoolProfile = { nama: 'SDN 24 BANDA ACEH', alamat: 'Jalan Pendidikan No. 12, Banda Aceh', kepsek: 'Nama Kepala Sekolah', nipKepsek: '19700101 200003 1 001', kopSurat: '' };
 
   // Muat Data
   App.fetchAPI('getDatabase', {}, 'GET').then(res => {
@@ -41,6 +42,13 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch(e) {
           holidays = [];
         }
+      }
+
+      // Ambil Profil Sekolah
+      if (res.data.settings && res.data.settings.SCHOOL_PROFILE) {
+        try {
+          schoolProfile = JSON.parse(res.data.settings.SCHOOL_PROFILE);
+        } catch(e) {}
       }
 
       // Render pertama kali (berdasarkan bulan ini)
@@ -306,8 +314,10 @@ document.addEventListener('DOMContentLoaded', () => {
         </head>
         <body>
           <div class="kop-surat">
-            <h2>SDN 24 BANDA ACEH</h2>
-            <p>Jalan Pendidikan No. 12, Banda Aceh</p>
+            ${schoolProfile.kopSurat ? `<img src="${App.getDirectImageUrl(schoolProfile.kopSurat)}" style="width: 100%; max-height: 120px; object-fit: contain; margin-bottom: 10px;">` : `
+            <h2>${schoolProfile.nama}</h2>
+            <p>${schoolProfile.alamat}</p>
+            `}
           </div>
           
           <div class="judul-laporan">LAPORAN RIWAYAT ABSENSI PEGAWAI</div>
@@ -336,10 +346,10 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="clearfix">
             <div class="ttd-box">
               <p style="margin:0;">Banda Aceh, ${hariIni}</p>
-              <p style="margin:0;">Kepala Sekolah SDN 24 Banda Aceh,</p>
+              <p style="margin:0;">Kepala Sekolah ${schoolProfile.nama},</p>
               
-              <p class="ttd-nama">Nama Kepala Sekolah</p>
-              <p style="margin:0;">NIP. 19700101 200003 1 001</p>
+              <p class="ttd-nama">${schoolProfile.kepsek}</p>
+              <p style="margin:0;">NIP. ${schoolProfile.nipKepsek || '-'}</p>
             </div>
           </div>
 

@@ -241,61 +241,16 @@ function processAbsensi(type, btn) {
     return;
   }
   
-  // Calculate On-Time / Late / Holiday based on Schedule
-  let keterangan = "Tepat Waktu";
-  if (weeklySchedule) {
-    const now = new Date();
-    const day = now.getDay();
-    const scheduleToday = weeklySchedule[day];
-    
-    if (scheduleToday) {
-      if (scheduleToday.entryStart === "00:00" && scheduleToday.entryEnd === "00:00") {
-        keterangan = "Hari Libur";
-      } else {
-        const currentMins = now.getHours() * 60 + now.getMinutes();
-        if (type === 'Masuk') {
-          // Check early, on-time, late for check-in
-          const startParts = (scheduleToday.entryStart || '00:00').split(':');
-          const endParts = (scheduleToday.entryEnd || '00:00').split(':');
-          const tolMins = scheduleToday.entryTol || 0;
-          
-          const startM = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
-          const endM = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
-          
-          if (currentMins < startM) {
-            keterangan = "Terlalu Cepat";
-          } else if (currentMins > endM + tolMins) {
-            keterangan = "Terlambat";
-          } else {
-            keterangan = "Tepat Waktu";
-          }
-        } else if (type === 'Pulang') {
-          // Check early, on-time, late for check-out
-          const startParts = (scheduleToday.exitStart || '00:00').split(':');
-          const endParts = (scheduleToday.exitEnd || '00:00').split(':');
-          const tolMins = scheduleToday.exitTol || 0;
-          
-          const startM = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
-          const endM = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
-          
-          if (currentMins < startM) {
-            keterangan = "Pulang Cepat";
-          } else if (currentMins > endM + tolMins) {
-            keterangan = "Terlambat Pulang";
-          } else {
-            keterangan = "Tepat Waktu";
-          }
-        }
-      }
-    }
-  }
+  // Catatan: Kalkulasi Terlambat/Tepat Waktu dan Hari Libur 
+  // telah dipindahkan ke sisi server (Google Script) untuk mencegah manipulasi waktu.
+  // Waktu absensi yang valid adalah waktu server, bukan waktu di perangkat ini.
   
   const payload = {
     username: user.username,
     nama: user.nama,
     status: type,
-    keterangan: keterangan,
-    jarak: Math.round(distance) + 'm',
+    userLat: userLocation ? userLocation.lat : null,
+    userLng: userLocation ? userLocation.lng : null,
     photo: photoData
   };
   
@@ -307,7 +262,7 @@ function processAbsensi(type, btn) {
       Swal.fire({
         icon: 'success',
         title: `Absen ${type} Berhasil!`,
-        text: `Waktu: ${new Date().toLocaleTimeString('id-ID')}`,
+        text: `Tercatat di server pusat.`,
         confirmButtonColor: '#10B981',
         confirmButtonText: 'Tutup'
       }).then(() => {

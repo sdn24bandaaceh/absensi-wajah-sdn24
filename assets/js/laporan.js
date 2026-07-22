@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   let dbUsers = [];
   let dbAttendance = [];
+  let schoolProfile = { nama: 'SDN 24 BANDA ACEH', alamat: 'Jalan Pendidikan No. 12, Banda Aceh', kepsek: 'Nama Kepala Sekolah', nipKepsek: '19700101 200003 1 001', kopSurat: '' };
 
   // Set default values for inputs
   const today = new Date().toISOString().split('T')[0];
@@ -15,6 +16,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if(res && res.success) {
         dbUsers = res.data.users;
         dbAttendance = res.data.attendance;
+        if(res.data.settings && res.data.settings.SCHOOL_PROFILE) {
+          try { schoolProfile = JSON.parse(res.data.settings.SCHOOL_PROFILE); } catch(e){}
+        }
         
         // Populate pegawai dropdown
         const selectPegawai = document.getElementById('selectPegawai');
@@ -123,9 +127,21 @@ document.addEventListener('DOMContentLoaded', () => {
             th, td { border: 1px solid #000; padding: 8px; text-align: left; }
             th { background-color: #f2f2f2; }
             h2, h3 { text-align: center; }
+            .kop-surat { text-align: center; margin-bottom: 20px; border-bottom: 3px solid #000; padding-bottom: 15px; }
+            .kop-surat h2 { margin: 0; font-size: 22px; text-transform: uppercase; }
+            .kop-surat p { margin: 5px 0 0 0; font-size: 14px; }
+            .ttd-box { float: right; width: 300px; text-align: left; margin-top: 30px; font-size: 14px; }
+            .ttd-nama { font-weight: bold; text-decoration: underline; margin-top: 80px; margin-bottom: 2px;}
+            .clearfix::after { content: ""; clear: both; display: table; }
           </style>
         </head>
         <body>
+          <div class="kop-surat">
+            ${schoolProfile.kopSurat ? `<img src="${App.getDirectImageUrl(schoolProfile.kopSurat)}" style="width: 100%; max-height: 120px; object-fit: contain; margin-bottom: 10px;">` : `
+            <h2>${schoolProfile.nama}</h2>
+            <p>${schoolProfile.alamat}</p>
+            `}
+          </div>
           <h2>Laporan Absensi Harian</h2>
           <h3>Tanggal: ${date}</h3>
           <table>
@@ -142,8 +158,19 @@ document.addEventListener('DOMContentLoaded', () => {
               ${trHtml}
             </tbody>
           </table>
+          <div class="clearfix">
+            <div class="ttd-box">
+              <p style="margin:0;">Banda Aceh, ${date}</p>
+              <p style="margin:0;">Kepala Sekolah ${schoolProfile.nama},</p>
+              
+              <p class="ttd-nama">${schoolProfile.kepsek}</p>
+              <p style="margin:0;">NIP. ${schoolProfile.nipKepsek || '-'}</p>
+            </div>
+          </div>
           <script>
-            window.onload = function() { window.print(); window.close(); }
+            window.onload = function() { 
+              setTimeout(function(){ window.print(); window.close(); }, 500);
+            }
           </script>
         </body>
       </html>
@@ -179,9 +206,21 @@ document.addEventListener('DOMContentLoaded', () => {
             th, td { border: 1px solid #000; padding: 8px; text-align: left; }
             th { background-color: #f2f2f2; }
             h2, p { text-align: center; }
+            .kop-surat { text-align: center; margin-bottom: 20px; border-bottom: 3px solid #000; padding-bottom: 15px; }
+            .kop-surat h2 { margin: 0; font-size: 22px; text-transform: uppercase; }
+            .kop-surat p { margin: 5px 0 0 0; font-size: 14px; }
+            .ttd-box { float: right; width: 300px; text-align: left; margin-top: 30px; font-size: 14px; }
+            .ttd-nama { font-weight: bold; text-decoration: underline; margin-top: 80px; margin-bottom: 2px;}
+            .clearfix::after { content: ""; clear: both; display: table; }
           </style>
         </head>
         <body>
+          <div class="kop-surat">
+            ${schoolProfile.kopSurat ? `<img src="${App.getDirectImageUrl(schoolProfile.kopSurat)}" style="width: 100%; max-height: 120px; object-fit: contain; margin-bottom: 10px;">` : `
+            <h2>${schoolProfile.nama}</h2>
+            <p>${schoolProfile.alamat}</p>
+            `}
+          </div>
           <h2>Riwayat Absensi Pegawai</h2>
           <p><strong>Nama:</strong> ${user.nama} | <strong>NIP:</strong> ${user.nip || '-'}</p>
           <table>
@@ -197,8 +236,19 @@ document.addEventListener('DOMContentLoaded', () => {
               ${trHtml}
             </tbody>
           </table>
+          <div class="clearfix">
+            <div class="ttd-box">
+              <p style="margin:0;">Banda Aceh, ${new Date().toISOString().split('T')[0]}</p>
+              <p style="margin:0;">Kepala Sekolah ${schoolProfile.nama},</p>
+              
+              <p class="ttd-nama">${schoolProfile.kepsek}</p>
+              <p style="margin:0;">NIP. ${schoolProfile.nipKepsek || '-'}</p>
+            </div>
+          </div>
           <script>
-            window.onload = function() { window.print(); window.close(); }
+            window.onload = function() { 
+              setTimeout(function(){ window.print(); window.close(); }, 500);
+            }
           </script>
         </body>
       </html>

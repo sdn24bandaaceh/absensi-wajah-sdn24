@@ -26,9 +26,28 @@ document.addEventListener('DOMContentLoaded', () => {
     displayRoleEl.textContent = userRole === 'admin' ? 'Administrator' : 'Pegawai';
   }
   
-  if (userRole === 'admin') {
+  if (userRole === 'admin' || userRole === 'superadmin') {
     const btnEditPeng = document.getElementById('btnEditPengumuman');
     if (btnEditPeng) btnEditPeng.style.display = 'inline-block';
+  }
+
+  if (userRole === 'superadmin') {
+    const menuProfil = document.getElementById('menuProfilSekolah');
+    if (menuProfil) {
+      menuProfil.classList.remove('d-none');
+    }
+  } else {
+    // Hide Profil Sekolah panel from non-superadmin (in pengaturan.html)
+    const panelProfil = document.getElementById('panelProfilSekolah');
+    if (panelProfil) {
+      panelProfil.style.display = 'none';
+      // Make the app config panel take full width
+      const appConfigPanel = document.getElementById('formAppConfig')?.closest('.col-lg-6');
+      if (appConfigPanel) {
+        appConfigPanel.classList.remove('col-lg-6');
+        appConfigPanel.classList.add('col-lg-12');
+      }
+    }
   }
 
   initSidebar();
@@ -82,6 +101,12 @@ function loadDashboardData() {
       
       if (typeof renderRingkasanHarian === 'function') {
         renderRingkasanHarian(data.users, data.attendance, data.permits);
+      }
+      
+      // Update School Profile dynamically
+      if (data.settings && data.settings.SCHOOL_PROFILE) {
+        localStorage.setItem('schoolProfile', data.settings.SCHOOL_PROFILE);
+        if (App.applySchoolProfile) App.applySchoolProfile();
       }
       
       initCharts(pns, pppk, honorer);
@@ -447,20 +472,13 @@ document.getElementById('formPengumuman')?.addEventListener('submit', (e) => {
   btn.innerHTML = 'Menyimpan...';
   btn.disabled = true;
   
-  // Ambil pengumuman saat ini (global dari settings)
-  let arr = currentAnnouncements || [];
-  
-  const newItem = {
+  const payload = {
     title: document.getElementById('pengumumanTitle').value,
     content: document.getElementById('pengumumanContent').value,
-    type: document.getElementById('pengumumanType').value,
-    date: new Date().toISOString()
+    type: document.getElementById('pengumumanType').value
   };
   
-  // Tambah ke paling atas
-  arr.unshift(newItem);
-  
-  App.fetchAPI('updateSettings', { settings: { ANNOUNCEMENTS: JSON.stringify(arr) } }, 'POST')
+  App.fetchAPI('addAnnouncement', payload, 'POST')
     .then(res => {
       btn.innerHTML = originalTxt;
       btn.disabled = false;

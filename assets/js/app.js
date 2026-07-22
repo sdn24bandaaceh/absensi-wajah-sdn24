@@ -7,6 +7,82 @@ const App = {
     this.initDarkMode();
     this.initTooltips();
     this.initAOS();
+    this.applySchoolProfile();
+  },
+
+  getDirectImageUrl(url) {
+    if (!url) return '';
+    // Convert Google Drive view URL to direct image URL
+    const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) {
+      // Menggunakan URL thumbnail yang lebih stabil untuk tag <img>
+      return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w500`;
+    }
+    return url;
+  },
+
+  applySchoolProfile() {
+    const profileStr = localStorage.getItem('schoolProfile');
+    if (profileStr) {
+      try {
+        const profile = JSON.parse(profileStr);
+        const logoUrl = this.getDirectImageUrl(profile.logo);
+        
+        // Update sidebar names
+        const sidebarTitles = document.querySelectorAll('.sidebar-header h6');
+        sidebarTitles.forEach(el => {
+           if (profile.nama) el.textContent = profile.nama;
+        });
+        
+        // Update login page name
+        const loginSubtitle = document.querySelector('.login-card p');
+        if (loginSubtitle && profile.nama) {
+          loginSubtitle.textContent = profile.nama;
+        }
+        
+        // Update logo in sidebar
+        const sidebarIcons = document.querySelectorAll('.sidebar-header i.bi-shield-lock-fill');
+        sidebarIcons.forEach(el => {
+           if (logoUrl) {
+             const img = document.createElement('img');
+             img.src = logoUrl;
+             img.style.width = '40px';
+             img.style.height = '40px';
+             img.style.objectFit = 'contain';
+             img.className = 'me-2';
+             el.parentNode.replaceChild(img, el);
+           }
+        });
+        
+        // Update existing img logo in sidebar
+        const sidebarImgs = document.querySelectorAll('.sidebar-header img.me-2');
+        sidebarImgs.forEach(el => {
+           if (logoUrl) el.src = logoUrl;
+        });
+        
+        // Update logo in login page
+        const loginIcon = document.querySelector('.login-card .bi-shield-lock');
+        if (loginIcon && logoUrl) {
+           const img = document.createElement('img');
+           img.src = logoUrl;
+           img.style.width = '80px';
+           img.style.height = '80px';
+           img.style.objectFit = 'contain';
+           img.className = 'mb-2';
+           loginIcon.parentNode.replaceChild(img, loginIcon);
+        }
+        // Update existing img logo in login page
+        const loginImg = document.querySelector('.login-card img.mb-2');
+        if (loginImg && logoUrl) {
+           loginImg.src = logoUrl;
+        }
+        
+        // Update document title
+        if (profile.nama) {
+          document.title = document.title.replace('SDN 24 Banda Aceh', profile.nama).replace('SD Negeri 24 Banda Aceh', profile.nama);
+        }
+      } catch(e) {}
+    }
   },
 
   async fetchAPI(action, payload = {}, method = 'POST') {

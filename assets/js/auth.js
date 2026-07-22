@@ -23,8 +23,12 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const user = response.user;
             let role = 'pegawai';
-            const uname = user.username.toLowerCase();
-            if (uname === 'admin' || uname === 'kepsek' || uname === 'operator' || user.role === 'Admin') {
+            const uname = user.username ? user.username.toLowerCase() : '';
+            const userRole = user.role ? user.role.toLowerCase() : '';
+            
+            if (uname === 'superadmin' || userRole === 'superadmin') {
+              role = 'superadmin';
+            } else if (uname === 'admin' || uname === 'kepsek' || uname === 'operator' || userRole === 'admin') {
               role = 'admin';
             }
             
@@ -33,6 +37,10 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('userRole', role);
             localStorage.setItem('userName', user.nama || username);
             localStorage.setItem('userId', user.username);
+            
+            if (response.schoolProfile) {
+              localStorage.setItem('schoolProfile', JSON.stringify(response.schoolProfile));
+            }
             
             setTimeout(() => {
               window.location.href = 'dashboard.html';
