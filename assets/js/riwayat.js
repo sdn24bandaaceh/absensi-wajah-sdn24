@@ -133,7 +133,29 @@ document.addEventListener('DOMContentLoaded', () => {
         let ketPulang = '';
 
         absensiHariIni.forEach(a => {
-          const timePart = a.timestamp.split(', ')[1] || '-';
+          let timePart = '-';
+          if (a.timestamp && typeof a.timestamp === 'string') {
+            if (a.timestamp.includes(', ')) {
+              timePart = a.timestamp.split(', ')[1];
+            } else if (a.timestamp.includes('T')) {
+              try {
+                const d = new Date(a.timestamp);
+                timePart = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0');
+              } catch(e) {
+                timePart = a.timestamp.split('T')[1].slice(0, 8);
+              }
+            } else if (a.timestamp.includes(' ')) {
+              timePart = a.timestamp.split(' ')[1];
+            } else {
+              timePart = a.timestamp;
+            }
+          } else if (a.timestamp) {
+             try {
+                const d = new Date(a.timestamp);
+                timePart = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0');
+             } catch(e) {}
+          }
+
           if (a.status === 'Masuk') {
             wMasuk = timePart;
             ketMasuk = a.keterangan || '';

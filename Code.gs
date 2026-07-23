@@ -239,10 +239,18 @@ function doGet(e) {
             }
           }
           
+          // Generate simple token for admin authorization
+          let adminToken = "";
+          if (userObj.role === 'admin' || userObj.role === 'superadmin') {
+            const dateStr = Utilities.formatDate(new Date(), "GMT", "yyyyMMdd");
+            adminToken = Utilities.base64Encode(username + "_ADMIN_" + dateStr);
+          }
+          
           return output.setContent(JSON.stringify({
             success: true,
             user: userObj,
-            schoolProfile: schoolProfile
+            schoolProfile: schoolProfile,
+            adminToken: adminToken
           }));
         }
       }
@@ -262,7 +270,7 @@ function doGet(e) {
       const usersData = ss.getSheetByName(SHEET_USERS).getDataRange().getValues();
       const users = usersData.slice(1).map(row => ({
         foto: row[0], nama: row[1], nip: row[2], pangkat: row[3],
-        jabatan: row[4], status: row[5], username: row[6], password: row[7], role: row[8]
+        jabatan: row[4], status: row[5], username: row[6], role: row[8]
       }));
       
       // Ambil data Attendance (Absensi)
@@ -326,6 +334,25 @@ function doPost(e) {
     const action = payload.action;
     
     const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // Helper function to verify admin token
+    function verifyAdminToken(username, token) {
+      if (!username || !token) return false;
+      const today = Utilities.formatDate(new Date(), "GMT", "yyyyMMdd");
+      const yesterday = Utilities.formatDate(new Date(new Date().getTime() - 86400000), "GMT", "yyyyMMdd");
+      const expectedToken1 = Utilities.base64Encode(username + "_ADMIN_" + today);
+      const expectedToken2 = Utilities.base64Encode(username + "_ADMIN_" + yesterday);
+      return token === expectedToken1 || token === expectedToken2;
+    }
+
+    // List of actions that require admin authorization
+    const adminActions = ["addUser", "updateUser", "deleteUser", "updateSettings", "updateSchoolProfile", "addAnnouncement", "updatePermitStatus", "manualAttendance"];
+    
+    if (adminActions.includes(action)) {
+      if (!verifyAdminToken(payload.requestUserId, payload.adminToken)) {
+        return output.setContent(JSON.stringify({ success: false, message: "Akses Ditolak: Memerlukan otorisasi admin atau sesi telah kedaluwarsa." }));
+      }
+    }
 
     // --- AKSI: TAMBAH USER (addUser) ---
     if (action === "addUser") {
@@ -461,7 +488,7 @@ function doPost(e) {
       const currentMins = serverDate.getHours() * 60 + serverDate.getMinutes();
       const todayIso = serverDate.getFullYear() + "-" + String(serverDate.getMonth()+1).padStart(2, '0') + "-" + String(serverDate.getDate()).padStart(2, '0');
       const currentTimeStr = String(serverDate.getHours()).padStart(2, '0') + ":" + String(serverDate.getMinutes()).padStart(2, '0') + ":" + String(serverDate.getSeconds()).padStart(2, '0');
-      const timestamp = todayIso + ", " + currentTimeStr;
+      const timestamp = "'" + todayIso + ", " + currentTimeStr;
       
       // Cek Libur
       let isHoliday = false;
@@ -521,6 +548,28 @@ function doPost(e) {
         photoUrl
       ]);
       return output.setContent(JSON.stringify({ success: true, message: "Absensi berhasil dicatat." }));
+    }
+
+    // --- AKSI: MANUAL ATTENDANCE (manualAttendance) ---
+    if (action === "manualAttendance") {
+      const sheet = ss.getSheetByName(SHEET_ATTENDANCE);
+      
+      const payloadDate = payload.date; // YYYY-MM-DD
+      const payloadTime = payload.time; // HH:MM
+      
+      const timestamp = "'" + payloadDate + ", " + payloadTime + ":00";
+      const keterangan = payload.keterangan || "Absen Manual (Admin)";
+      
+      sheet.appendRow([
+        timestamp,
+        payload.username || "",
+        payload.nama || "",
+        payload.status || "", // Masuk / Pulang
+        keterangan,
+        "Manual (Admin)",
+        "N/A"
+      ]);
+      return output.setContent(JSON.stringify({ success: true, message: "Absensi manual berhasil disimpan." }));
     }
 
     // --- AKSI: SUBMIT PERMIT (submitPermit) ---

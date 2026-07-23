@@ -109,3 +109,44 @@ Dokumen ini berisi daftar perubahan, perbaikan *bug*, dan penambahan fitur yang 
     *   **Realtime DOM Update:** Fungsi baru `applySchoolProfile()` di `app.js` ditambahkan. Sekarang nama sekolah dan logo pada Sidebar (semua halaman) maupun layar utama Login akan diperbarui secara otomatis begitu halaman dimuat (dari *localStorage*). Modul Pengaturan juga dipaksa agar selalu merender ulang setelan UI setelah pengguna menekan "Simpan Profil".
     *   **Penanganan URL Gambar Google Drive:** Mengubah sistem pembacaan *Drive ID* menggunakan format URL tipe `thumbnail` agar gambar kebal terhadap pemblokiran pihak ketiga. Komponen cetak Laporan Harian dan Rekapitulasi kini mengeksekusi konversi URL gambar pada logo dan kop surat sebelum merendernya.
     *   **File Permission Override:** Memaksa parameter setSharing `ANYONE_WITH_LINK` (Public View) pada script `Code.gs` saat menyisipkan *blob* logo/kop surat secara langsung ke tiap berkas Google Drive untuk menjamin gambar bisa ditayangkan secara *online* tanpa login akun Google.
+
+---
+
+## [23 Juli 2026] - Peningkatan Keamanan Lanjut & Fitur Rekapitulasi
+
+### 16. Penambalan Celah Eksekusi Lanjut (Keamanan)
+*   **Masalah:** Ditemukan kerentanan pada `Code.gs` di mana pengguna dapat memanipulasi *request* dengan menyisipkan struktur yang tidak terduga untuk mencoba mengeksekusi script secara tak terotorisasi (*arbitrary code execution/injection*).
+*   **File yang diubah:** `Code.gs`
+*   **Solusi:** Memperketat validasi, sanitasi, dan kontrol keamanan pada fungsi `doPost` untuk memblokir pola-pola URL tak terdaftar (yang menolak HTTP `fetch` berbahaya).
+
+### 17. Penambahan Fitur "Laporan Sertifikasi" (Rekapitulasi)
+*   **Masalah:** Modul Rekapitulasi hanya memiliki satu jenis tampilan (Rekap Detail), padahal sekolah membutuhkan format "Laporan Sertifikasi" yang menampilkan daftar absensi harian (tanggal 1 s/d 31) secara mendatar.
+*   **File yang diubah:** `rekapitulasi.html`, `assets/js/rekapitulasi.js`
+*   **Solusi:** Menambahkan form *dropdown* **Jenis Laporan**. Jika "Laporan Sertifikasi" dipilih, sistem akan memuat tabel baru secara otomatis, menghitung tanggal secara kalender penuh, merender huruf (H)adir, (S)akit, (I)zin, (A)lpa, atau (L)ibur untuk masing-masing hari, lalu menambahkan 4 kolom penjumlahan (Total H, S, I, A) di akhir tabel per pegawainya.
+
+### 18. Standardisasi Antarmuka & Logika H.Kerja (Rekapitulasi)
+*   **Masalah:** Tabel Laporan Sertifikasi dan Rekap Detail memiliki perbedaan gaya kolom biodata. Selain itu, perhitungan nilai "H.Kerja" pada tabel Rekap Detail sempat terikat/kaku pada angka 22 hari, sehingga total perhitungannya salah/berbeda dengan kalender nyata bulan yang di-filter.
+*   **File yang diubah:** `assets/js/rekapitulasi.js`
+*   **Solusi:** 
+    *   **Antarmuka:** Menyelaraskan struktur header Laporan Sertifikasi agar sama dengan Rekap Detail (menggabungkan Nama/NIP bertumpuk vertikal, menambahkan status warna-warni `badge` pada tipe PNS/PPPK, dan Jabatan).
+    *   **Logika H.Kerja:** Menambahkan blok algoritma `calendarDays` ke fungsi Rekap Detail. Sistem kini akan menganalisa pengaturan *Hari Libur (Holidays)* dan konfigurasi *Jam Kerja Mingguan (Weekly Schedule)* untuk menghitung jumlah nyata hari kerja (*working days*) dalam bulan berjalan.
+
+### 19. Penambahan Opsi Jumlah Entri Tampilan (DataTables Pagination)
+*   **Masalah:** Daftar pegawai (khususnya untuk sekolah besar) bisa memanjang berhalaman-halaman. Tabel sebelumnya terkunci hanya menampilkan 10 atau 20 baris dan merepotkan admin jika ingin melihat lebih banyak.
+*   **File yang diubah:** `assets/js/rekapitulasi.js`
+*   **Solusi:** Memodifikasi konfigurasi `dom` milik plugin *DataTables* dan menyisipkan fungsi kontrol `lengthMenu`. Tersedia *dropdown* opsi (10, 25, 50, 100, atau "Semua") agar Admin bisa menentukan berapa jumlah baris data yang tampil di layar dalam sekali lihat. Diletakkan bersebelahan secara rapi dengan tombol Ekspor Laporan.
+
+### 20. Penambahan Fitur Absen Manual (Admin)
+*   **Masalah:** Sering terjadi kasus di mana pegawai lupa absen, terlambat secara teknis, atau terjadi kesalahan pemindaian wajah. Admin membutuhkan fitur cadangan untuk memasukkan data absensi secara manual.
+*   **File yang dibuat/diubah:** `Code.gs`, `absen-manual.html`, `assets/js/absen-manual.js`, penyisipan navigasi di seluruh halaman utama.
+*   **Solusi:** 
+    *   Membuat *endpoint* baru di sisi server (`manualAttendance`) yang berfungsi menyuntikkan data kehadiran langsung ke *database* dengan parameter keterangan "Manual (Admin)".
+    *   Membuat antarmuka `absen-manual.html` yang dilengkapi validasi hak akses *(Role Admin)*, *dropdown* daftar nama pegawai otomatis, serta *input* status kehadiran (Masuk/Pulang).
+    *   Menambahkan tautan **Absen Manual** ke dalam *Sidebar* tepat di bawah menu Data Pegawai yang tampil bagi akun Administrator.
+
+### 21. Perbaikan Bug Ekstraksi Format Jam (Riwayat Absensi & Rekapitulasi)
+*   **Masalah:** Jam Masuk dan Jam Pulang di halaman Riwayat Absensi terkadang tidak muncul (hanya menampilkan strip `-`). Ini terjadi karena Google Sheets sering otomatis mem-parsing tanggal+jam yang masuk sebagai *Date Object* sehingga mengubah format teks mentahnya menjadi ISO String (`YYYY-MM-DDTHH:mm:ss.sssZ`).
+*   **File yang diubah:** `Code.gs`, `assets/js/riwayat.js`
+*   **Solusi:** 
+    *   Memperbarui algoritma pembacaan waktu (ekstraksi) pada skrip `riwayat.js` agar menjadi fleksibel (sistem akan secara dinamis mengekstrak jam menggunakan objek *Date* atau pemisahan *String* tergantung format datanya).
+    *   Merombak sistem *injector* pada `Code.gs` dengan menambahkan prefix karakter kutip tunggal (`'`) sebelum tanggal disimpan. Ini akan memaksa Google Sheets di kemudian hari untuk selalu mengenali data tanggal/jam secara permanen sebagai karakter *Plain Text*.

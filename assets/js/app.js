@@ -87,6 +87,13 @@ const App = {
 
   async fetchAPI(action, payload = {}, method = 'POST') {
     try {
+      // Inject admin token and user ID if available
+      const userId = localStorage.getItem('userId');
+      const adminToken = localStorage.getItem('adminToken');
+      
+      if (userId && !payload.requestUserId) payload.requestUserId = userId;
+      if (adminToken && !payload.adminToken) payload.adminToken = adminToken;
+
       if (method === 'GET') {
         const queryParams = new URLSearchParams({ action, ...payload, _t: Date.now() }).toString();
         const response = await fetch(`${this.API_URL}?${queryParams}`);

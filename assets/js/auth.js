@@ -41,6 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.schoolProfile) {
               localStorage.setItem('schoolProfile', JSON.stringify(response.schoolProfile));
             }
+            if (response.adminToken) {
+              localStorage.setItem('adminToken', response.adminToken);
+            }
             
             setTimeout(() => {
               window.location.href = 'dashboard.html';
@@ -67,5 +70,7 @@ function logout() {
   localStorage.removeItem('isLoggedIn');
   localStorage.removeItem('userRole');
   localStorage.removeItem('userName');
+  localStorage.removeItem('userId');
+  localStorage.removeItem('adminToken');
   window.location.href = 'login.html';
 }
