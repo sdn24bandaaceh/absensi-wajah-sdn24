@@ -150,3 +150,38 @@ Dokumen ini berisi daftar perubahan, perbaikan *bug*, dan penambahan fitur yang 
 *   **Solusi:** 
     *   Memperbarui algoritma pembacaan waktu (ekstraksi) pada skrip `riwayat.js` agar menjadi fleksibel (sistem akan secara dinamis mengekstrak jam menggunakan objek *Date* atau pemisahan *String* tergantung format datanya).
     *   Merombak sistem *injector* pada `Code.gs` dengan menambahkan prefix karakter kutip tunggal (`'`) sebelum tanggal disimpan. Ini akan memaksa Google Sheets di kemudian hari untuk selalu mengenali data tanggal/jam secara permanen sebagai karakter *Plain Text*.
+
+### 22. Algoritma Smart Append untuk Mencegah "Jumping Rows" (Google Sheets)
+*   **Masalah:** Ditemukan kejadian di mana data absensi masuk ke baris yang jauh di bawah (baris ke-999), melompati ratusan baris kosong di atasnya (mulai baris 58). Ini disebabkan fungsi standar Google Apps Script (`sheet.appendRow`) menganggap baris-baris kosong tersebut masih memiliki format/sisa data dari aktivitas sebelumnya (seperti spasi, format sel, atau penghapusan sel menggunakan tombol *Backspace/Delete*).
+*   **File yang diubah:** `Code.gs`
+*   **Solusi:**
+    *   Membuat fungsi helper baru `smartAppendRow(sheet, rowData)` yang bekerja dengan memindai array di Kolom A (mulai dari baris ke-2 untuk melindungi Header) guna menemukan baris kosong pertama secara akurat.
+    *   Mengganti semua penggunaan `sheet.appendRow` pada aksi penambahan data pengguna dan absensi (`addUser`, `submitAttendance`, `manualAttendance`, dan `submitPermit`) dengan `smartAppendRow`. Data yang masuk kini dipastikan akan selalu mengisi baris kosong pertama yang tersedia secara berurutan dan rapi.
+
+### 23. Perbaikan Alur Navigasi & Keamanan Akses "Pengaturan Profil"
+*   **Masalah:** Saat pengguna (Pegawai maupun Admin) mengklik opsi "Pengaturan Profil" pada dropdown avatar di pojok kanan atas, sistem malah melompat/membuka halaman `pengaturan.html` yang merupakan halaman **Pengaturan Sistem & Profil Sekolah (Super Admin)**. Selain salah sasaran, halaman pengaturan tersebut sebelumnya juga belum diproteksi dari akses pengguna biasa.
+*   **File yang diubah:** `dashboard.html`, `absensi.html`, `assets/js/app.js`, `assets/js/pengaturan.js`, `Code.gs`
+*   **Solusi:**
+    *   **Modal Profil Saya (Universal):** Mengubah perilaku tautan "Pengaturan Profil" di seluruh aplikasi agar tidak lagi berpindah halaman, melainkan membuka **Modal Profil Saya** (`App.showProfileModal`) yang interaktif dan modern. Modal ini menampilkan Biodata (Nama, NIP/Username, Role Badge, dan Avatar) serta menyediakan opsi pengubahan kata sandi akun secara mandiri.
+    *   **Inisialisasi Navigasi (`initUserNav`):** Memperbaiki tampilan avatar di navbar agar inisial gambar yang muncul sesuai dengan nama pengguna yang sedang login (bukan lagi *default hardcoded* "Admin").
+    *   **Proteksi Keamanan Halaman (`pengaturan.js` & `app.js`):** Menambahkan verifikasi peran (*Role Security Guard*) pada file `pengaturan.js` dan global `App.init()`. Jika pengguna biasa mencoba mengakses URL halaman admin/pengaturan sistem secara langsung, sistem akan memblokir akses, memberikan pesan peringatan, dan mengarahkan kembali ke Dashboard.
+    *   **Endpoint Server Baru (`updateMyProfile`):** Menambahkan fungsi pada server `Code.gs` agar pengguna dapat menyimpan perubahan kata sandi baru mereka secara aman ke dalam Google Sheets tanpa memerlukan hak akses admin global.
+
+### 24. Peningkatan Modal "Profil Saya": Edit Lengkap & Upload Foto Avatar
+*   **Masalah:** Pengguna yang sedang aktif (Pegawai/Admin) membutuhkan fleksibilitas untuk mengubah data biodata pribadi mereka (seperti Foto Wajah, Nama, NIP, Pangkat/Golongan, Username, dan Kata Sandi) langsung dari tampilan antarmuka tanpa harus meminta bantuan Admin/Operator.
+*   **File yang diubah:** `assets/js/app.js`, `assets/js/auth.js`, `Code.gs`
+*   **Solusi:**
+    *   **Upload Foto / Avatar Langsung:** Menambahkan tombol "Ganti Foto / Avatar" pada Modal Profil Saya yang dilengkapi validasi ukuran maksimal (5MB) dan pratinjau (*live preview*) instan. Saat disimpan, foto diunggah langsung ke folder Google Drive (`User_Photos`) melalui server Apps Script (`saveBase64ToDrive`) dan URL publiknya disinkronkan ke spreadsheet.
+    *   **Edit Form Lengkap:** Mengubah tampilan statis pada modal menjadi form interaktif yang memungkinkan pengguna memperbarui **Nama Lengkap**, **NIP**, **Pangkat/Golongan**, **Username**, dan **Kata Sandi (Password)**.
+    *   **Sinkronisasi Real-Time (`getMyProfile`):** Menambahkan *endpoint* baru `getMyProfile` pada `Code.gs`. Setiap kali pengguna membuka Modal Profil Saya, sistem secara otomatis mengambil data profil terbaru dari server dan meng-cache ke dalam `localStorage` (`userData`), memastikan biodata yang ditampilkan selalu mutakhir.
+    *   **Keamanan Ganti Akun:** Jika pengguna merubah Username atau Kata Sandi mereka, sistem secara otomatis memberi notifikasi dan mengarahkan pengguna untuk login ulang demi keamanan sesi.
+
+### 25. Auto-Resolusi & Sinkronisasi Riwayat Absensi Saat Ubah Username (Google Sheets)
+*   **Masalah:** Saat pengguna (seperti Ainsyah) mengubah Username akun mereka dari NIP (`196909112006042004`) menjadi nama pendek (`Ainsyah`), seluruh riwayat absensi dan izin dari hari-hari sebelumnya seolah-olah hilang dan tidak tampil di halaman Riwayat Absensi / Laporan. Hal ini terjadi karena rekam jejak lama di Google Sheets masih tersimpan mengacu pada Username lama / NIP.
+*   **File yang diubah:** `Code.gs`
+*   **Solusi:**
+    *   **Dynamic Username Resolution & Auto-Migration (`getDatabase`):** Memperbaiki alur pengambilan data pada `getDatabase`. Sistem kini secara pintar memetakan (*mapping*) seluruh catatan absensi dan izin berdasarkan NIP, Nama, maupun Username lama ke Username yang sedang aktif saat ini. Begitu aplikasi dibuka/direfresh, sistem secara otomatis memperbarui (*self-healing / auto-migrate*) sel di spreadsheet Google Sheets yang masih menggunakan NIP/username lama menjadi username baru, sehingga seluruh riwayat kehadiran lama langsung muncul kembali dengan rapi.
+    *   **Cascading History Sync (`syncUserHistory`):** Menambahkan fungsi helper `syncUserHistory` yang otomatis dipanggil setiap kali pengguna memperbarui profilnya (`updateMyProfile`) atau saat Admin mengedit data pegawai (`updateUser`). Fungsi ini memastikan integritas relasi database tetap terjaga di seluruh sheet (`Attendance` dan `Permits`).
+
+
+

@@ -262,7 +262,7 @@ function doGet(e) {
       }));
     }
     
-    // --- 2. AKSI: GET DATABASE (Sync Realtime) ---
+    // --- 2. AKSI: GET DATABASE (Sync Realtime & Auto-Migration) ---
     if (action === "getDatabase") {
       const ss = SpreadsheetApp.getActiveSpreadsheet();
       
@@ -273,20 +273,89 @@ function doGet(e) {
         jabatan: row[4], status: row[5], username: row[6], role: row[8]
       }));
       
-      // Ambil data Attendance (Absensi)
-      const attendanceData = ss.getSheetByName(SHEET_ATTENDANCE).getDataRange().getValues();
-      const attendance = attendanceData.slice(1).map(row => ({
-        timestamp: row[0], username: row[1], nama: row[2], status: row[3],
-        keterangan: row[4], jarak: row[5], photo: row[6]
-      }));
+      // Pemetaan ID pengguna (Username, NIP, Nama) ke Username dan Nama resmi saat ini
+      const userMap = {};
+      const nameToOfficial = {};
+      users.forEach(u => {
+        const officialUname = String(u.username || "").trim();
+        const officialNama = String(u.nama || "").trim();
+        if (officialUname) {
+          userMap[officialUname.toLowerCase()] = { username: officialUname, nama: officialNama };
+          if (u.nip && String(u.nip).trim() !== "") {
+            userMap[String(u.nip).trim().toLowerCase()] = { username: officialUname, nama: officialNama };
+          }
+          if (officialNama !== "") {
+            nameToOfficial[officialNama.toLowerCase()] = { username: officialUname, nama: officialNama };
+          }
+        }
+      });
       
-      // Ambil data Permits (Izin)
-      const permitsData = ss.getSheetByName(SHEET_PERMITS).getDataRange().getValues();
-      const permits = permitsData.slice(1).map(row => ({
-        id: row[0], username: row[1], nama: row[2], tipe: row[3],
-        tanggalMulai: row[4], tanggalSelesai: row[5], alasan: row[6],
-        status: row[7], fileData: row[8], fileName: row[9]
-      }));
+      // Ambil data Attendance (Absensi) dengan auto-sync & resolusi username
+      const sheetAtt = ss.getSheetByName(SHEET_ATTENDANCE);
+      const attendanceData = sheetAtt.getDataRange().getValues();
+      let attNeedsUpdate = false;
+      
+      const attendance = attendanceData.slice(1).map((row, idx) => {
+        const attUname = String(row[1] || "").trim();
+        const attNama = String(row[2] || "").trim();
+        let resolvedUname = attUname;
+        let resolvedNama = attNama;
+        
+        const mapped = userMap[attUname.toLowerCase()] || nameToOfficial[attNama.toLowerCase()];
+        if (mapped) {
+          if (mapped.username !== attUname || (mapped.nama !== "" && mapped.nama !== attNama)) {
+            resolvedUname = mapped.username;
+            if (mapped.nama !== "") resolvedNama = mapped.nama;
+            attendanceData[idx + 1][1] = resolvedUname;
+            attendanceData[idx + 1][2] = resolvedNama;
+            attNeedsUpdate = true;
+          }
+        }
+        return {
+          timestamp: row[0], username: resolvedUname, nama: resolvedNama, status: row[3],
+          keterangan: row[4], jarak: row[5], photo: row[6]
+        };
+      });
+      
+      if (attNeedsUpdate && attendanceData.length > 1) {
+        try {
+          sheetAtt.getRange(1, 1, attendanceData.length, attendanceData[0].length).setValues(attendanceData);
+        } catch(e) { Logger.log("Auto-sync att error: " + e); }
+      }
+      
+      // Ambil data Permits (Izin) dengan auto-sync & resolusi username
+      const sheetPermits = ss.getSheetByName(SHEET_PERMITS);
+      const permitsData = sheetPermits.getDataRange().getValues();
+      let permNeedsUpdate = false;
+      
+      const permits = permitsData.slice(1).map((row, idx) => {
+        const permUname = String(row[1] || "").trim();
+        const permNama = String(row[2] || "").trim();
+        let resolvedUname = permUname;
+        let resolvedNama = permNama;
+        
+        const mapped = userMap[permUname.toLowerCase()] || nameToOfficial[permNama.toLowerCase()];
+        if (mapped) {
+          if (mapped.username !== permUname || (mapped.nama !== "" && mapped.nama !== permNama)) {
+            resolvedUname = mapped.username;
+            if (mapped.nama !== "") resolvedNama = mapped.nama;
+            permitsData[idx + 1][1] = resolvedUname;
+            permitsData[idx + 1][2] = resolvedNama;
+            permNeedsUpdate = true;
+          }
+        }
+        return {
+          id: row[0], username: resolvedUname, nama: resolvedNama, tipe: row[3],
+          tanggalMulai: row[4], tanggalSelesai: row[5], alasan: row[6],
+          status: row[7], fileData: row[8], fileName: row[9]
+        };
+      });
+      
+      if (permNeedsUpdate && permitsData.length > 1) {
+        try {
+          sheetPermits.getRange(1, 1, permitsData.length, permitsData[0].length).setValues(permitsData);
+        } catch(e) { Logger.log("Auto-sync perm error: " + e); }
+      }
       
       // Ambil data Settings
       const settingsData = ss.getSheetByName(SHEET_SETTINGS).getDataRange().getValues();
@@ -366,7 +435,7 @@ function doPost(e) {
         }
       }
 
-      sheet.appendRow([
+      smartAppendRow(sheet, [
         payload.foto || "",
         payload.nama || "",
         payload.nip || "",
@@ -387,30 +456,149 @@ function doPost(e) {
       let foundIndex = -1;
 
       for (let i = 1; i < data.length; i++) {
-        if (data[i][6] === payload.username) {
+        if (data[i][6] === payload.username || (payload.oldUsername && data[i][6] === payload.oldUsername)) {
           foundIndex = i + 1; // Baris spreadsheet dimulai dari 1
           break;
         }
       }
 
       if (foundIndex !== -1) {
+        const oldRow = sheet.getRange(foundIndex, 1, 1, 9).getValues()[0];
+        const oldUname = oldRow[6];
+        const newUname = payload.username || oldUname;
+        const newNama = payload.nama !== undefined && payload.nama !== null ? payload.nama : oldRow[1];
+        const newNip = payload.nip !== undefined && payload.nip !== null ? payload.nip : oldRow[2];
+
         // Update baris: Foto(1), Nama(2), NIP(3), Pangkat(4), Jabatan(5), Status(6), Username(7), Password(8), Role(9)
         const rowRange = sheet.getRange(foundIndex, 1, 1, 9);
         rowRange.setValues([[
-          payload.foto || "",
-          payload.nama || "",
-          payload.nip || "",
-          payload.pangkat || "",
-          payload.jabatan || "",
-          payload.status || "",
-          payload.username || "",
-          payload.password || "",
-          payload.role || "Peserta"
+          payload.foto !== undefined && payload.foto !== null ? payload.foto : oldRow[0],
+          newNama,
+          newNip,
+          payload.pangkat !== undefined && payload.pangkat !== null ? payload.pangkat : oldRow[3],
+          payload.jabatan !== undefined && payload.jabatan !== null ? payload.jabatan : oldRow[4],
+          payload.status !== undefined && payload.status !== null ? payload.status : oldRow[5],
+          newUname,
+          payload.password !== undefined && payload.password !== null && String(payload.password).trim() !== "" ? payload.password : oldRow[7],
+          payload.role !== undefined && payload.role !== null ? payload.role : oldRow[8]
         ]]);
+        
+        syncUserHistory(oldUname, newUname, newNip, newNama);
         return output.setContent(JSON.stringify({ success: true, message: "Data pengguna berhasil diperbarui." }));
       } else {
         return output.setContent(JSON.stringify({ success: false, message: "Pengguna tidak ditemukan." }));
       }
+    }
+
+    // --- AKSI: UPDATE PROFIL SAYA (updateMyProfile) ---
+    if (action === "updateMyProfile") {
+      const searchUsername = payload.oldUsername || payload.username;
+      if (!searchUsername) {
+        return output.setContent(JSON.stringify({ success: false, message: "Username diperlukan." }));
+      }
+      const sheet = ss.getSheetByName(SHEET_USERS);
+      const data = sheet.getDataRange().getValues();
+      let foundIndex = -1;
+
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][6]).toLowerCase() === String(searchUsername).toLowerCase()) {
+          foundIndex = i + 1;
+          break;
+        }
+      }
+
+      if (foundIndex !== -1) {
+        // Cek jika ganti username dan apakah username baru sudah terpakai
+        const newUname = payload.newUsername || payload.username || searchUsername;
+        if (String(newUname).toLowerCase() !== String(searchUsername).toLowerCase()) {
+          for (let i = 1; i < data.length; i++) {
+            if ((i + 1) !== foundIndex && String(data[i][6]).toLowerCase() === String(newUname).toLowerCase()) {
+              return output.setContent(JSON.stringify({ success: false, message: "Username baru sudah digunakan oleh pengguna lain!" }));
+            }
+          }
+        }
+
+        // Handle upload foto jika berupa base64
+        let fotoUrl = data[foundIndex - 1][0];
+        if (payload.foto !== undefined && payload.foto !== null && String(payload.foto).trim() !== "") {
+          const fotoStr = String(payload.foto).trim();
+          if (fotoStr.startsWith("data:image/")) {
+            const uploadedUrl = saveBase64ToDrive(fotoStr, "User_Photos", "avatar_" + newUname + "_" + new Date().getTime() + ".jpg");
+            if (uploadedUrl && uploadedUrl !== "") {
+              fotoUrl = uploadedUrl;
+            }
+          } else {
+            fotoUrl = fotoStr;
+          }
+          sheet.getRange(foundIndex, 1).setValue(fotoUrl);
+        }
+
+        if (payload.nama !== undefined && payload.nama !== null) {
+          sheet.getRange(foundIndex, 2).setValue(payload.nama);
+        }
+        if (payload.nip !== undefined && payload.nip !== null) {
+          sheet.getRange(foundIndex, 3).setValue(payload.nip);
+        }
+        if (payload.pangkat !== undefined && payload.pangkat !== null) {
+          sheet.getRange(foundIndex, 4).setValue(payload.pangkat);
+        }
+        if (newUname && newUname !== "") {
+          sheet.getRange(foundIndex, 7).setValue(newUname);
+        }
+        if (payload.password && String(payload.password).trim() !== "") {
+          sheet.getRange(foundIndex, 8).setValue(payload.password.trim());
+        }
+
+        // Ambil data terbaru untuk dikembalikan ke frontend
+        const updatedRow = sheet.getRange(foundIndex, 1, 1, 9).getValues()[0];
+        const updatedUser = {
+          foto: updatedRow[0],
+          nama: updatedRow[1],
+          nip: updatedRow[2],
+          pangkat: updatedRow[3],
+          jabatan: updatedRow[4],
+          status: updatedRow[5],
+          username: updatedRow[6],
+          role: String(updatedRow[8]).toLowerCase()
+        };
+        
+        // Sinkronisasi riwayat absensi dan izin ke username/nama baru
+        syncUserHistory(searchUsername, updatedRow[6], updatedRow[2], updatedRow[1]);
+
+        return output.setContent(JSON.stringify({
+          success: true,
+          message: "Profil berhasil diperbarui.",
+          user: updatedUser
+        }));
+      } else {
+        return output.setContent(JSON.stringify({ success: false, message: "Pengguna tidak ditemukan." }));
+      }
+    }
+
+    // --- AKSI: GET PROFIL SAYA (getMyProfile) ---
+    if (action === "getMyProfile") {
+      const uname = e.parameter.username || payload.username;
+      if (!uname) {
+        return output.setContent(JSON.stringify({ success: false, message: "Username diperlukan." }));
+      }
+      const sheet = ss.getSheetByName(SHEET_USERS);
+      const data = sheet.getDataRange().getValues();
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][6]).toLowerCase() === String(uname).toLowerCase()) {
+          const userObj = {
+            foto: data[i][0],
+            nama: data[i][1],
+            nip: data[i][2],
+            pangkat: data[i][3],
+            jabatan: data[i][4],
+            status: data[i][5],
+            username: data[i][6],
+            role: String(data[i][8]).toLowerCase()
+          };
+          return output.setContent(JSON.stringify({ success: true, user: userObj }));
+        }
+      }
+      return output.setContent(JSON.stringify({ success: false, message: "Pengguna tidak ditemukan." }));
     }
 
     // --- AKSI: DELETE USER (deleteUser) ---
@@ -538,7 +726,7 @@ function doPost(e) {
          photoUrl = saveBase64ToDrive(photoUrl, "Absensi_Photos_SDN24", fileName);
       }
       
-      sheet.appendRow([
+      smartAppendRow(sheet, [
         timestamp,
         payload.username || payload.user_id || "",
         payload.nama || "",
@@ -560,7 +748,7 @@ function doPost(e) {
       const timestamp = "'" + payloadDate + ", " + payloadTime + ":00";
       const keterangan = payload.keterangan || "Absen Manual (Admin)";
       
-      sheet.appendRow([
+      smartAppendRow(sheet, [
         timestamp,
         payload.username || "",
         payload.nama || "",
@@ -584,7 +772,7 @@ function doPost(e) {
          fileUrl = saveBase64ToDrive(fileUrl, "Izin_Files_SDN24", payload.fileName || fileName);
       }
 
-      sheet.appendRow([
+      smartAppendRow(sheet, [
         newId,
         payload.username || "",
         payload.nama || "",
@@ -773,5 +961,123 @@ function saveBase64ToDrive(base64Data, folderName, fileName) {
   } catch (error) {
     Logger.log("Error saving to Drive: " + error.toString());
     return "";
+  }
+}
+
+/**
+ * Smart Append: Menambahkan baris baru pada baris kosong pertama di Kolom A
+ * untuk mencegah fenomena 'Jumping Rows' akibat sisa format atau sel kosong di baris bawah.
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - Lembar kerja tujuan
+ * @param {Array} rowData - Array data yang akan disisipkan
+ */
+function smartAppendRow(sheet, rowData) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow === 0) {
+    sheet.appendRow(rowData);
+    return;
+  }
+  const colA = sheet.getRange(1, 1, lastRow, 1).getValues();
+  let targetRow = lastRow + 1;
+  // Mulai dari i = 1 (Baris ke-2) untuk melindungi baris ke-1 (Header)
+  for (let i = 1; i < colA.length; i++) {
+    const val = colA[i][0];
+    if (val === "" || val === null || String(val).trim() === "") {
+      targetRow = i + 1;
+      break;
+    }
+  }
+  sheet.getRange(targetRow, 1, 1, rowData.length).setValues([rowData]);
+}
+
+/**
+ * Sinkronisasi Username dan Nama pada tabel Attendance dan Permits
+ * Memastikan riwayat absensi dan izin tetap terhubung meskipun Username atau Nama diubah.
+ * @param {string} oldUsername - Username lama (sebelum diubah)
+ * @param {string} newUsername - Username baru (aktif saat ini)
+ * @param {string} nip - NIP pengguna
+ * @param {string} nama - Nama lengkap pengguna
+ */
+function syncUserHistory(oldUsername, newUsername, nip, nama) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const oldU = String(oldUsername || "").trim().toLowerCase();
+    const newU = String(newUsername || "").trim();
+    const newULow = newU.toLowerCase();
+    const nipStr = String(nip || "").trim().toLowerCase();
+    const namaStr = String(nama || "").trim().toLowerCase();
+    
+    if (!newU) return;
+
+    // 1. Sync Sheet Attendance
+    const sheetAtt = ss.getSheetByName(SHEET_ATTENDANCE);
+    if (sheetAtt) {
+      const lastRow = sheetAtt.getLastRow();
+      if (lastRow > 1) {
+        const range = sheetAtt.getRange(1, 1, lastRow, sheetAtt.getLastColumn());
+        const data = range.getValues();
+        let hasChanged = false;
+
+        for (let i = 1; i < data.length; i++) {
+          const attUname = String(data[i][1] || "").trim();
+          const attUnameLow = attUname.toLowerCase();
+          const attNama = String(data[i][2] || "").trim().toLowerCase();
+
+          let isMatch = false;
+          if (oldU && attUnameLow === oldU) isMatch = true;
+          else if (attUnameLow === newULow) isMatch = true;
+          else if (nipStr && nipStr !== "" && attUnameLow === nipStr) isMatch = true;
+          else if (namaStr && namaStr !== "" && attNama === namaStr) isMatch = true;
+
+          if (isMatch) {
+            if (attUname !== newU || (nama && String(data[i][2]) !== nama)) {
+              data[i][1] = newU;
+              if (nama) data[i][2] = nama;
+              hasChanged = true;
+            }
+          }
+        }
+
+        if (hasChanged) {
+          range.setValues(data);
+        }
+      }
+    }
+
+    // 2. Sync Sheet Permits
+    const sheetPermits = ss.getSheetByName(SHEET_PERMITS);
+    if (sheetPermits) {
+      const lastRow = sheetPermits.getLastRow();
+      if (lastRow > 1) {
+        const range = sheetPermits.getRange(1, 1, lastRow, sheetPermits.getLastColumn());
+        const data = range.getValues();
+        let hasChanged = false;
+
+        for (let i = 1; i < data.length; i++) {
+          const permUname = String(data[i][1] || "").trim();
+          const permUnameLow = permUname.toLowerCase();
+          const permNama = String(data[i][2] || "").trim().toLowerCase();
+
+          let isMatch = false;
+          if (oldU && permUnameLow === oldU) isMatch = true;
+          else if (permUnameLow === newULow) isMatch = true;
+          else if (nipStr && nipStr !== "" && permUnameLow === nipStr) isMatch = true;
+          else if (namaStr && namaStr !== "" && permNama === namaStr) isMatch = true;
+
+          if (isMatch) {
+            if (permUname !== newU || (nama && String(data[i][2]) !== nama)) {
+              data[i][1] = newU;
+              if (nama) data[i][2] = nama;
+              hasChanged = true;
+            }
+          }
+        }
+
+        if (hasChanged) {
+          range.setValues(data);
+        }
+      }
+    }
+  } catch (error) {
+    Logger.log("Error syncUserHistory: " + error.toString());
   }
 }

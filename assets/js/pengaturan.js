@@ -1,4 +1,22 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const userRole = localStorage.getItem('userRole') || 'pegawai';
+  if (userRole !== 'admin' && userRole !== 'superadmin') {
+    App.showToast('Akses ditolak: Halaman Pengaturan Sistem hanya untuk Admin / Super Admin', 'error');
+    setTimeout(() => { window.location.href = 'dashboard.html'; }, 1000);
+    return;
+  }
+  if (userRole !== 'superadmin') {
+    const panelProfil = document.getElementById('panelProfilSekolah');
+    if (panelProfil) {
+      panelProfil.style.display = 'none';
+      const appConfigPanel = document.getElementById('formAppConfig')?.closest('.col-lg-6');
+      if (appConfigPanel) {
+        appConfigPanel.classList.remove('col-lg-6');
+        appConfigPanel.classList.add('col-lg-12');
+      }
+    }
+  }
+
   let currentProfile = {};
 
   loadPengaturan();

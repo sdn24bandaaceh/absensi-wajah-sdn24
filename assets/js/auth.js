@@ -37,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('userRole', role);
             localStorage.setItem('userName', user.nama || username);
             localStorage.setItem('userId', user.username);
+            localStorage.setItem('userData', JSON.stringify(user));
             
             if (response.schoolProfile) {
               localStorage.setItem('schoolProfile', JSON.stringify(response.schoolProfile));
@@ -71,6 +72,7 @@ function logout() {
   localStorage.removeItem('userRole');
   localStorage.removeItem('userName');
   localStorage.removeItem('userId');
+  localStorage.removeItem('userData');
   localStorage.removeItem('adminToken');
   window.location.href = 'login.html';
 }
