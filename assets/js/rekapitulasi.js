@@ -184,6 +184,11 @@ $(document).ready(function() {
     }
     
     $('#tableRekap tbody').html(tbodyHtml);
+    
+    const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+    const strBulan = monthNames[parseInt(month) - 1] || month;
+    const docTitle = 'Rekapitulasi Absensi Wajah Bulan ' + strBulan + ' ' + year;
+    
     tableDetail = $('#tableRekap').DataTable({
       language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json' },
       scrollX: true,
@@ -195,13 +200,82 @@ $(document).ready(function() {
         {
           extend: 'excelHtml5',
           text: '<i class="bi bi-file-earmark-excel"></i> Export Excel',
-          className: 'btn btn-success btn-sm mb-2 mb-md-0'
+          className: 'btn btn-success btn-sm mb-2 mb-md-0',
+          title: docTitle
         },
         {
           extend: 'pdfHtml5',
           text: '<i class="bi bi-file-earmark-pdf"></i> Export PDF',
           className: 'btn btn-danger btn-sm mb-2 mb-md-0',
-          orientation: 'landscape'
+          orientation: 'landscape',
+          title: docTitle,
+          exportOptions: {
+            format: {
+              body: function (data, row, column, node) {
+                // 1. Bersihkan seluruh tag HTML menjadi spasi
+                let cleanText = data.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                // 2. Memaksa NIP turun ke bawah (baris baru)
+                if (column === 1) {
+                  return cleanText.replace(/ NIP\./g, '\nNIP.');
+                }
+                return cleanText;
+              }
+            }
+          },
+          customize: function(doc) {
+             // 1. Dapatkan data profil sekolah
+             let kepsek = "Nama Kepala Sekolah";
+             let nipKepsek = "-";
+             try {
+                const profileStr = localStorage.getItem('schoolProfile');
+                if(profileStr) {
+                   const profile = JSON.parse(profileStr);
+                   if(profile.kepsek) kepsek = profile.kepsek;
+                   if(profile.nipKepsek) nipKepsek = profile.nipKepsek;
+                }
+             } catch(e){}
+
+             // 2. Beri garis kotak pada tabel
+             var objLayout = {};
+             objLayout['hLineWidth'] = function(i) { return 0.5; };
+             objLayout['vLineWidth'] = function(i) { return 0.5; };
+             objLayout['hLineColor'] = function(i) { return '#000000'; };
+             objLayout['vLineColor'] = function(i) { return '#000000'; };
+             objLayout['paddingLeft'] = function(i) { return 4; };
+             objLayout['paddingRight'] = function(i) { return 4; };
+             doc.content[1].layout = objLayout;
+             
+             // Styling font dan warna tabel
+             doc.defaultStyle.fontSize = 9;
+             doc.styles.tableHeader.fontSize = 10;
+             doc.styles.tableHeader.alignment = 'center';
+             doc.styles.tableHeader.fillColor = '#343a40';
+             doc.styles.tableHeader.color = '#ffffff';
+             
+             // 3. Tambahkan tanda tangan di bawah
+             const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+             const strBulan = monthNames[parseInt(month) - 1] || month;
+             const lastDate = new Date(year, parseInt(month), 0).getDate();
+             const tglStr = lastDate + ' ' + strBulan + ' ' + year;
+             
+             doc.content.push({
+               margin: [0, 40, 0, 0],
+               columns: [
+                 { width: '*', text: '' }, // pendorong dari kiri
+                 {
+                   width: 180, // lebar area tanda tangan
+                   alignment: 'left', // teks di dalam area ini rata kiri
+                   text: [
+                     'Banda Aceh, ' + tglStr + '\n',
+                     'Kepala Sekolah\n\n\n\n\n\n',
+                     { text: kepsek, bold: true },
+                     '\nNIP. ' + nipKepsek
+                   ]
+                 },
+                 { width: 100, text: '' } // pendorong dari kanan (geser ke kiri)
+               ]
+             });
+          }
         }
       ]
     });
@@ -380,6 +454,11 @@ $(document).ready(function() {
     }
     
     $('#tableRekapSertifikasi tbody').html(tbodyHtml);
+    
+    const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+    const strBulan = monthNames[parseInt(month) - 1] || month;
+    const docTitle = 'Rekapitulasi Sertifikasi Bulan ' + strBulan + ' ' + year;
+    
     tableSertifikasi = $('#tableRekapSertifikasi').DataTable({
       language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json' },
       scrollX: true,
@@ -392,7 +471,7 @@ $(document).ready(function() {
           extend: 'excelHtml5',
           text: '<i class="bi bi-file-earmark-excel"></i> Export Excel',
           className: 'btn btn-success btn-sm mb-2 mb-md-0',
-          title: 'Rekapitulasi Sertifikasi - ' + month + '/' + year
+          title: docTitle
         },
         {
           extend: 'pdfHtml5',
@@ -400,11 +479,78 @@ $(document).ready(function() {
           className: 'btn btn-danger btn-sm mb-2 mb-md-0',
           orientation: 'landscape',
           pageSize: 'LEGAL',
-          title: 'Rekapitulasi Sertifikasi - ' + month + '/' + year,
+          title: docTitle,
+          exportOptions: {
+            format: {
+              body: function (data, row, column, node) {
+                // 1. Bersihkan seluruh tag HTML menjadi spasi
+                let cleanText = data.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                // 2. Memaksa NIP turun ke bawah (baris baru)
+                if (column === 1) {
+                  return cleanText.replace(/ NIP\./g, '\nNIP.');
+                }
+                return cleanText;
+              }
+            }
+          },
           customize: function(doc) {
+             let kepsek = "Nama Kepala Sekolah";
+             let nipKepsek = "-";
+             try {
+                const profileStr = localStorage.getItem('schoolProfile');
+                if(profileStr) {
+                   const profile = JSON.parse(profileStr);
+                   if(profile.kepsek) kepsek = profile.kepsek;
+                   if(profile.nipKepsek) nipKepsek = profile.nipKepsek;
+                }
+             } catch(e){}
+
+             var objLayout = {};
+             objLayout['hLineWidth'] = function(i) { return 0.5; };
+             objLayout['vLineWidth'] = function(i) { return 0.5; };
+             objLayout['hLineColor'] = function(i) { return '#000000'; };
+             objLayout['vLineColor'] = function(i) { return '#000000'; };
+             objLayout['paddingLeft'] = function(i) { return 4; };
+             objLayout['paddingRight'] = function(i) { return 4; };
+             doc.content[1].layout = objLayout;
+             
              doc.defaultStyle.fontSize = 7; 
              doc.styles.tableHeader.fontSize = 8;
-             doc.content[1].table.widths = Array(doc.content[1].table.body[0].length + 1).join('*').split('');
+             doc.styles.tableHeader.alignment = 'center';
+             doc.styles.tableHeader.fillColor = '#343a40';
+             doc.styles.tableHeader.color = '#ffffff';
+             
+             // Atur lebar kolom agar proporsional
+             let colCount = doc.content[1].table.body[0].length;
+             let customWidths = ['auto', 90, 50, 35, 'auto']; // No, Nama, Jabatan, Status, H.Kerja
+             for(let i=5; i < colCount - 4; i++) {
+               customWidths.push('auto'); // Kolom tanggal (lebar menyesuaikan isi 'L', 'H', dll agar sekecil mungkin)
+             }
+             customWidths.push('auto', 'auto', 'auto', 'auto'); // Hadir, Sakit, Izin, Alpa
+             doc.content[1].table.widths = customWidths;
+
+             const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+             const strBulan = monthNames[parseInt(month) - 1] || month;
+             const lastDate = new Date(year, parseInt(month), 0).getDate();
+             const tglStr = lastDate + ' ' + strBulan + ' ' + year;
+
+             doc.content.push({
+               margin: [0, 40, 0, 0],
+               columns: [
+                 { width: '*', text: '' }, // pendorong dari kiri
+                 {
+                   width: 180, // lebar area tanda tangan
+                   alignment: 'left', // teks di dalam area ini rata kiri
+                   text: [
+                     'Banda Aceh, ' + tglStr + '\n',
+                     'Kepala Sekolah\n\n\n\n\n\n',
+                     { text: kepsek, bold: true },
+                     '\nNIP. ' + nipKepsek
+                   ]
+                 },
+                 { width: 140, text: '' } // pendorong dari kanan (geser ke kiri lebih jauh krn banyak kolom)
+               ]
+             });
           }
         }
       ]
