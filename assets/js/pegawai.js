@@ -21,7 +21,22 @@ $(document).ready(function() {
              statusWajah = `<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Terdaftar</span>`;
           }
           
-          let fotoUrl = u.foto || `https://ui-avatars.com/api/?name=${u.nama}&background=random`;
+          // Konversi link Google Drive viewer ke format raw image agar bisa ditampilkan
+          let rawFoto = u.foto;
+          if (rawFoto && rawFoto.includes('drive.google.com/')) {
+            const match = rawFoto.match(/file\/d\/([a-zA-Z0-9_-]+)/) || rawFoto.match(/id=([a-zA-Z0-9_-]+)/);
+            if (match) {
+              // Gunakan endpoint thumbnail Drive untuk menghindari pemblokiran CORS/CORB
+              rawFoto = `https://drive.google.com/thumbnail?id=${match[1]}&sz=w500`;
+            }
+          }
+          
+          let fotoUrl = (rawFoto && rawFoto.length > 10 && (String(rawFoto).startsWith('http') || String(rawFoto).startsWith('data:'))) ? rawFoto : `https://ui-avatars.com/api/?name=${u.nama}&background=random`;
+          
+          let roleBadge = `<span class="badge bg-primary">${u.status || 'PNS'}</span>`;
+          if (u.pesanBlokir && u.pesanBlokir.trim() !== '') {
+            roleBadge = `<span class="badge bg-danger"><i class="bi bi-shield-lock"></i> Diblokir</span>`;
+          }
           
           let actionBtns = `
             <button class="btn btn-sm btn-info text-white" onclick="viewPegawai('${u.username}')"><i class="bi bi-eye"></i></button>
@@ -41,7 +56,7 @@ $(document).ready(function() {
               </div>
             `,
             u.nip || '-',
-            `<span class="badge bg-primary">${u.status || 'PNS'}</span>`,
+            roleBadge,
             u.jabatan || '-',
             statusWajah,
             actionBtns
@@ -70,6 +85,7 @@ $(document).ready(function() {
        username: document.getElementById('p_username').value,
        password: document.getElementById('p_password').value,
        role: document.getElementById('p_role').value,
+       pesanBlokir: document.getElementById('p_pesan_blokir').value
     };
     
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Menyimpan...';
@@ -111,19 +127,29 @@ function deletePegawai(username) {
 function viewPegawai(username) {
   const user = window.usersData.find(u => u.username === username);
   if (user) {
-    Swal.fire({
-      title: 'Detail Pegawai',
-      html: `
-        <div class="text-start mt-3">
-          <p><strong>Nama:</strong> ${user.nama}</p>
-          <p><strong>NIP:</strong> ${user.nip || '-'}</p>
-          <p><strong>Pangkat:</strong> ${user.pangkat || '-'}</p>
-          <p><strong>Jabatan:</strong> ${user.jabatan || '-'}</p>
-          <p><strong>Status:</strong> ${user.status}</p>
-          <p><strong>Role:</strong> ${user.role}</p>
-        </div>
-      `,
-      imageUrl: user.foto || `https://ui-avatars.com/api/?name=${user.nama}&background=random`,
+      // Konversi link Google Drive viewer ke format raw image
+      let rawModalFoto = user.foto;
+      if (rawModalFoto && rawModalFoto.includes('drive.google.com/')) {
+        const match = rawModalFoto.match(/file\/d\/([a-zA-Z0-9_-]+)/) || rawModalFoto.match(/id=([a-zA-Z0-9_-]+)/);
+        if (match) {
+          rawModalFoto = `https://drive.google.com/thumbnail?id=${match[1]}&sz=w500`;
+        }
+      }
+      
+      Swal.fire({
+        title: 'Detail Pegawai',
+        html: `
+          <div class="text-start mt-3">
+            <p><strong>Nama:</strong> ${user.nama}</p>
+            <p><strong>NIP:</strong> ${user.nip || '-'}</p>
+            <p><strong>Pangkat:</strong> ${user.pangkat || '-'}</p>
+            <p><strong>Jabatan:</strong> ${user.jabatan || '-'}</p>
+            <p><strong>Status:</strong> ${user.status}</p>
+            <p><strong>Role:</strong> ${user.role}</p>
+            ${user.pesanBlokir ? `<div class="alert alert-danger mt-2 p-2 small"><i class="bi bi-shield-lock-fill"></i> <strong>Diblokir:</strong> ${user.pesanBlokir}</div>` : ''}
+          </div>
+        `,
+        imageUrl: (rawModalFoto && rawModalFoto.length > 10 && (String(rawModalFoto).startsWith('http') || String(rawModalFoto).startsWith('data:'))) ? rawModalFoto : `https://ui-avatars.com/api/?name=${user.nama}&background=random`,
       imageWidth: 100,
       imageHeight: 100,
       imageAlt: 'Foto ' + user.nama
@@ -144,8 +170,10 @@ function editPegawai(username) {
     document.getElementById('p_status').value = user.status;
     document.getElementById('p_username').value = user.username;
     document.getElementById('p_username').readOnly = true; // Tidak bisa ubah username saat edit
-    document.getElementById('p_password').value = user.password;
+    document.getElementById('p_password').value = ''; // Kosongkan agar tidak membingungkan
+    document.getElementById('p_password').required = false; // Tidak wajib diisi saat edit
     document.getElementById('p_role').value = user.role;
+    document.getElementById('p_pesan_blokir').value = user.pesanBlokir || '';
     
     $('#modalPegawai').modal('show');
   }
@@ -155,5 +183,6 @@ function openAddModal() {
   document.getElementById('formPegawai').reset();
   document.getElementById('isEdit').value = 'false';
   document.getElementById('p_username').readOnly = false;
+  document.getElementById('p_password').required = true;
   $('#modalPegawai').modal('show');
 }

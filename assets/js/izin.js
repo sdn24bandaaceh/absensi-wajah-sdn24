@@ -57,6 +57,19 @@ $(document).ready(function() {
 
   document.getElementById('formIzin').addEventListener('submit', async (e) => {
     e.preventDefault();
+    
+    // Cek apakah akun terblokir
+    const rawData = localStorage.getItem('userData');
+    if (rawData) {
+      try {
+        const uData = JSON.parse(rawData);
+        if (uData.pesanBlokir && uData.pesanBlokir.trim() !== '') {
+          App.showToast('Anda tidak dapat mengajukan izin karena akses ditangguhkan: ' + uData.pesanBlokir, 'error');
+          return;
+        }
+      } catch (err) {}
+    }
+
     const btn = e.target.querySelector('button[type="submit"]');
     const originalText = btn.innerHTML;
     

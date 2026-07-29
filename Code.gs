@@ -8,6 +8,7 @@ const SHEET_USERS = "Users";
 const SHEET_ATTENDANCE = "Attendance";
 const SHEET_PERMITS = "Permits";
 const SHEET_SETTINGS = "Settings";
+const SHEET_TUGAS_LUAR = "Tugas_Luar";
 
 /**
  * Fungsi untuk menginisialisasi database pada Spreadsheet
@@ -23,7 +24,7 @@ function setupDatabase() {
   }
   
   // Headers untuk Users
-  const userHeaders = ["Foto", "Nama", "NIP", "Pangkat", "Jabatan", "Status", "Username", "Password", "Role"];
+  const userHeaders = ["Foto", "Nama", "NIP", "Pangkat", "Jabatan", "Status", "Username", "Password", "Role", "Pesan Blokir"];
   sheetUsers.getRange(1, 1, 1, userHeaders.length).setValues([userHeaders]);
   
   // Format tampilan Header Users
@@ -37,10 +38,10 @@ function setupDatabase() {
       "-", 
       "-", 
       "Pemilik Sistem", 
-      "-", 
       "superadmin", 
       "super2026", 
-      "superadmin"
+      "superadmin",
+      ""
     ]);
     sheetUsers.appendRow([
       "https://placehold.co/100x100/3b82f6/white?text=Admin", 
@@ -48,10 +49,10 @@ function setupDatabase() {
       "19790220 200504 1 001", 
       "Pembina Tk.I, IV/b", 
       "Kepala Sekolah", 
-      "PNS", 
       "admin", 
       "admin2026", 
-      "admin"
+      "admin",
+      ""
     ]);
   }
 
@@ -86,6 +87,17 @@ function setupDatabase() {
   const settingsHeaders = ["Key", "Value"];
   sheetSettings.getRange(1, 1, 1, settingsHeaders.length).setValues([settingsHeaders]);
   formatHeader(sheetSettings, settingsHeaders.length);
+
+  // 5. Setup Sheet Tugas Luar
+  let sheetTugasLuar = ss.getSheetByName(SHEET_TUGAS_LUAR);
+  if (!sheetTugasLuar) {
+    sheetTugasLuar = ss.insertSheet(SHEET_TUGAS_LUAR);
+  }
+  
+  // Headers untuk Tugas Luar
+  const tugasLuarHeaders = ["ID", "Nama Tugas", "Latitude", "Longitude", "Radius", "Tanggal Mulai", "Tanggal Selesai", "Pegawai"];
+  sheetTugasLuar.getRange(1, 1, 1, tugasLuarHeaders.length).setValues([tugasLuarHeaders]);
+  formatHeader(sheetTugasLuar, tugasLuarHeaders.length);
 
   // Inisialisasi nilai default jika masih kosong
   if (sheetSettings.getLastRow() === 1) {
@@ -169,10 +181,10 @@ function createSuperAdmin() {
     "-", 
     "-", 
     "Pemilik Sistem", 
-    "-", 
     "superadmin", 
     "super2026", 
-    "superadmin"
+    "superadmin",
+    ""
   ]);
   
   Logger.log("Akun superadmin berhasil ditambahkan!");
@@ -216,7 +228,13 @@ function doGet(e) {
         const row = data[i];
         // Index urutan: Foto(0), Nama(1), NIP(2), Pangkat(3), Jabatan(4), Status(5), Username(6), Password(7), Role(8)
         
-        if (row[6] === username && row[7] === password) {
+        const dbUsername = String(row[6] || "").trim();
+        const dbNip = String(row[2] || "").replace(/\s/g, "");
+        const inputUsername = String(username || "").replace(/\s/g, "");
+        const inputPassword = String(password || "");
+        const dbPassword = String(row[7] || "");
+        
+        if ((dbUsername === inputUsername || dbNip === inputUsername) && dbPassword === inputPassword) {
           const userObj = {
             foto: row[0],
             nama: row[1],
@@ -225,7 +243,8 @@ function doGet(e) {
             jabatan: row[4],
             status: row[5],
             username: row[6],
-            role: row[8].toLowerCase()
+            role: row[8].toLowerCase(),
+            pesanBlokir: row[9] || ""
           };
           let schoolProfile = {};
           const sheetSettings = ss.getSheetByName(SHEET_SETTINGS);
@@ -270,7 +289,8 @@ function doGet(e) {
       const usersData = ss.getSheetByName(SHEET_USERS).getDataRange().getValues();
       const users = usersData.slice(1).map(row => ({
         foto: row[0], nama: row[1], nip: row[2], pangkat: row[3],
-        jabatan: row[4], status: row[5], username: row[6], role: row[8]
+        jabatan: row[4], status: row[5], username: row[6], role: row[8],
+        pesanBlokir: row[9] || ""
       }));
       
       // Pemetaan ID pengguna (Username, NIP, Nama) ke Username dan Nama resmi saat ini
@@ -363,6 +383,22 @@ function doGet(e) {
       for (let i = 1; i < settingsData.length; i++) {
         settings[settingsData[i][0]] = settingsData[i][1];
       }
+      // Ambil data Tugas Luar
+      const sheetTugasLuar = ss.getSheetByName(SHEET_TUGAS_LUAR);
+      let tugasLuar = [];
+      if (sheetTugasLuar) {
+        const tlData = sheetTugasLuar.getDataRange().getValues();
+        tugasLuar = tlData.slice(1).map(row => ({
+          id: row[0],
+          namaTugas: row[1],
+          lat: row[2],
+          lng: row[3],
+          radius: row[4],
+          tanggalMulai: row[5],
+          tanggalSelesai: row[6],
+          pegawai: (row[7] ? row[7].toString().split(',') : [])
+        }));
+      }
       
       return output.setContent(JSON.stringify({
         success: true,
@@ -370,7 +406,8 @@ function doGet(e) {
           users: users,
           attendance: attendance,
           permits: permits,
-          settings: settings
+          settings: settings,
+          tugasLuar: tugasLuar
         }
       }));
     }
@@ -415,7 +452,7 @@ function doPost(e) {
     }
 
     // List of actions that require admin authorization
-    const adminActions = ["addUser", "updateUser", "deleteUser", "updateSettings", "updateSchoolProfile", "addAnnouncement", "updatePermitStatus", "manualAttendance"];
+    const adminActions = ["addUser", "updateUser", "deleteUser", "updateSettings", "updateSchoolProfile", "addAnnouncement", "updatePermitStatus", "manualAttendance", "addTugasLuar", "updateTugasLuar", "deleteTugasLuar"];
     
     if (adminActions.includes(action)) {
       if (!verifyAdminToken(payload.requestUserId, payload.adminToken)) {
@@ -444,7 +481,8 @@ function doPost(e) {
         payload.status || "",
         payload.username || "",
         payload.password || "",
-        payload.role || "Peserta"
+        payload.role || "Peserta",
+        payload.pesanBlokir || ""
       ]);
       return output.setContent(JSON.stringify({ success: true, message: "Pengguna berhasil ditambahkan." }));
     }
@@ -469,8 +507,7 @@ function doPost(e) {
         const newNama = payload.nama !== undefined && payload.nama !== null ? payload.nama : oldRow[1];
         const newNip = payload.nip !== undefined && payload.nip !== null ? payload.nip : oldRow[2];
 
-        // Update baris: Foto(1), Nama(2), NIP(3), Pangkat(4), Jabatan(5), Status(6), Username(7), Password(8), Role(9)
-        const rowRange = sheet.getRange(foundIndex, 1, 1, 9);
+        const rowRange = sheet.getRange(foundIndex, 1, 1, 10);
         rowRange.setValues([[
           payload.foto !== undefined && payload.foto !== null ? payload.foto : oldRow[0],
           newNama,
@@ -480,7 +517,8 @@ function doPost(e) {
           payload.status !== undefined && payload.status !== null ? payload.status : oldRow[5],
           newUname,
           payload.password !== undefined && payload.password !== null && String(payload.password).trim() !== "" ? payload.password : oldRow[7],
-          payload.role !== undefined && payload.role !== null ? payload.role : oldRow[8]
+          payload.role !== undefined && payload.role !== null ? payload.role : oldRow[8],
+          payload.pesanBlokir !== undefined ? payload.pesanBlokir : (oldRow[9] || "")
         ]]);
         
         syncUserHistory(oldUname, newUname, newNip, newNama);
@@ -620,6 +658,23 @@ function doPost(e) {
 
     // --- AKSI: SUBMIT ATTENDANCE (submitAttendance) ---
     if (action === "submitAttendance") {
+      // 1. Cek apakah user sedang diblokir
+      const sheetUsers = ss.getSheetByName(SHEET_USERS);
+      if (sheetUsers) {
+        const usersData = sheetUsers.getDataRange().getValues();
+        for (let i = 1; i < usersData.length; i++) {
+          if (usersData[i][6] === (payload.username || payload.user_id)) {
+            if (usersData[i][9] && String(usersData[i][9]).trim() !== "") {
+              return output.setContent(JSON.stringify({ 
+                success: false, 
+                message: "Akses Absensi Diblokir: " + usersData[i][9] 
+              }));
+            }
+            break;
+          }
+        }
+      }
+
       const sheet = ss.getSheetByName(SHEET_ATTENDANCE);
       const sheetSettings = ss.getSheetByName(SHEET_SETTINGS);
       const settingsData = sheetSettings.getDataRange().getValues();
@@ -665,10 +720,6 @@ function doPost(e) {
         }
       }
       
-      if (isOutsideRadius) {
-        return output.setContent(JSON.stringify({ success: false, message: "Gagal: Lokasi Anda (" + calculatedDistance + ") di luar radius sekolah." }));
-      }
-      
       // Kalkulasi Waktu Server (GMT+7)
       const serverTimeStr = new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"});
       const serverDate = new Date(serverTimeStr);
@@ -677,6 +728,57 @@ function doPost(e) {
       const todayIso = serverDate.getFullYear() + "-" + String(serverDate.getMonth()+1).padStart(2, '0') + "-" + String(serverDate.getDate()).padStart(2, '0');
       const currentTimeStr = String(serverDate.getHours()).padStart(2, '0') + ":" + String(serverDate.getMinutes()).padStart(2, '0') + ":" + String(serverDate.getSeconds()).padStart(2, '0');
       const timestamp = "'" + todayIso + ", " + currentTimeStr;
+
+      let isTugasLuarActive = false;
+      let namaTugasLuar = "";
+
+      // Jika di luar sekolah, cek apakah ada Tugas Luar yang aktif untuk pengguna ini
+      if (isOutsideRadius && payload.userLat && payload.userLng) {
+        const sheetTugas = ss.getSheetByName(SHEET_TUGAS_LUAR);
+        if (sheetTugas) {
+          const tugasData = sheetTugas.getDataRange().getValues();
+          for (let i = 1; i < tugasData.length; i++) {
+            const tglMulai = tugasData[i][5];
+            const tglSelesai = tugasData[i][6];
+            
+            if (todayIso >= tglMulai && todayIso <= tglSelesai) {
+              const pegawaiArr = (tugasData[i][7] ? tugasData[i][7].toString().split(',') : []);
+              const uname = payload.username || payload.user_id || "";
+              
+              if (pegawaiArr.includes(uname)) {
+                const tLat = parseFloat(tugasData[i][2].toString().replace("'", ""));
+                const tLng = parseFloat(tugasData[i][3].toString().replace("'", ""));
+                const tRad = parseInt(tugasData[i][4]);
+                
+                const r = 6371e3;
+                const lat1 = tLat * Math.PI/180;
+                const lat2 = payload.userLat * Math.PI/180;
+                const deltaLat = (payload.userLat - tLat) * Math.PI/180;
+                const deltaLng = (payload.userLng - tLng) * Math.PI/180;
+                
+                const a = Math.sin(deltaLat/2) * Math.sin(deltaLat/2) +
+                          Math.cos(lat1) * Math.cos(lat2) *
+                          Math.sin(deltaLng/2) * Math.sin(deltaLng/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                const distanceTL = r * c;
+                
+                if (distanceTL <= tRad) {
+                  isOutsideRadius = false;
+                  isTugasLuarActive = true;
+                  calculatedDistance = Math.round(distanceTL) + "m";
+                  namaTugasLuar = tugasData[i][1];
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      if (isOutsideRadius) {
+        return output.setContent(JSON.stringify({ success: false, message: "Gagal: Lokasi Anda (" + calculatedDistance + ") di luar radius sekolah dan tidak ada jadwal penugasan luar." }));
+      }
+      
       
       // Cek Libur
       let isHoliday = false;
@@ -724,6 +826,10 @@ function doPost(e) {
       if (photoUrl.startsWith("data:image")) {
          const fileName = "Absen_" + (payload.username || payload.user_id || "User") + "_" + serverDate.getTime() + ".png";
          photoUrl = saveBase64ToDrive(photoUrl, "Absensi_Photos_SDN24", fileName);
+      }
+      
+      if (isTugasLuarActive) {
+         calculatedDistance = calculatedDistance + " (Tugas: " + namaTugasLuar + ")";
       }
       
       smartAppendRow(sheet, [
@@ -912,6 +1018,71 @@ function doPost(e) {
       }
       
       return output.setContent(JSON.stringify({ success: true, message: "Profil sekolah berhasil diperbarui." }));
+    }
+
+    // --- AKSI: ADD TUGAS LUAR (addTugasLuar) ---
+    if (action === "addTugasLuar") {
+      const sheet = ss.getSheetByName(SHEET_TUGAS_LUAR);
+      const newId = new Date().getTime().toString();
+      const pegawaiStr = Array.isArray(payload.pegawai) ? payload.pegawai.join(',') : payload.pegawai;
+      
+      smartAppendRow(sheet, [
+        newId,
+        payload.namaTugas || "",
+        "'" + (payload.lat || ""),
+        "'" + (payload.lng || ""),
+        payload.radius || 100,
+        payload.tanggalMulai || "",
+        payload.tanggalSelesai || "",
+        pegawaiStr || ""
+      ]);
+      return output.setContent(JSON.stringify({ success: true, message: "Tugas Luar berhasil ditambahkan." }));
+    }
+
+    // --- AKSI: UPDATE TUGAS LUAR (updateTugasLuar) ---
+    if (action === "updateTugasLuar") {
+      const sheet = ss.getSheetByName(SHEET_TUGAS_LUAR);
+      const data = sheet.getDataRange().getValues();
+      const targetId = String(payload.id);
+      
+      let foundIndex = -1;
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][0]) === targetId) {
+          foundIndex = i + 1;
+          break;
+        }
+      }
+      
+      if (foundIndex !== -1) {
+        const pegawaiStr = Array.isArray(payload.pegawai) ? payload.pegawai.join(',') : payload.pegawai;
+        sheet.getRange(foundIndex, 2, 1, 7).setValues([[
+          payload.namaTugas,
+          "'" + payload.lat,
+          "'" + payload.lng,
+          payload.radius,
+          payload.tanggalMulai,
+          payload.tanggalSelesai,
+          pegawaiStr
+        ]]);
+        return output.setContent(JSON.stringify({ success: true, message: "Tugas Luar berhasil diperbarui." }));
+      } else {
+        return output.setContent(JSON.stringify({ success: false, message: "Tugas Luar tidak ditemukan." }));
+      }
+    }
+
+    // --- AKSI: DELETE TUGAS LUAR (deleteTugasLuar) ---
+    if (action === "deleteTugasLuar") {
+      const sheet = ss.getSheetByName(SHEET_TUGAS_LUAR);
+      const data = sheet.getDataRange().getValues();
+      const targetId = String(payload.id);
+      
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][0]) === targetId) {
+          sheet.deleteRow(i + 1);
+          return output.setContent(JSON.stringify({ success: true, message: "Tugas Luar berhasil dihapus." }));
+        }
+      }
+      return output.setContent(JSON.stringify({ success: false, message: "Tugas Luar tidak ditemukan." }));
     }
 
     return output.setContent(JSON.stringify({ success: false, message: "Aksi tidak dikenali." }));

@@ -25,11 +25,16 @@ $(document).ready(function() {
             ? `<button class="btn btn-sm btn-secondary" disabled><i class="bi bi-ban"></i></button>`
             : `<button class="btn btn-sm btn-danger" onclick="deleteAdmin('${u.username}')"><i class="bi bi-trash"></i></button>`;
 
+          let rowStatus = `<span class="badge bg-success">Aktif</span>`;
+          if (u.pesanBlokir && u.pesanBlokir.trim() !== '') {
+            rowStatus = `<span class="badge bg-danger"><i class="bi bi-shield-lock"></i> Diblokir</span>`;
+          }
+
           table.row.add([
             u.username,
             u.nama,
             roleBadge,
-            `<span class="badge bg-success">Aktif</span>`,
+            rowStatus,
             btnReset + btnDelete
           ]);
         });
@@ -52,7 +57,8 @@ $(document).ready(function() {
       role: document.getElementById('u_role').value,
       status: 'PNS', // Default status for admins
       jabatan: document.getElementById('u_role').value,
-      foto: ''
+      foto: '',
+      pesanBlokir: document.getElementById('u_pesan_blokir') ? document.getElementById('u_pesan_blokir').value : ''
     };
 
     App.fetchAPI('addUser', payload, 'POST').then(res => {

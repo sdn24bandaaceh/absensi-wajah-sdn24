@@ -477,6 +477,18 @@ const App = {
         if (item.closest('.nav-item')) item.closest('.nav-item').style.display = 'none';
       }
     });
+  },
+
+  formatDateIndonesia(dateString) {
+    if (!dateString) return '-';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return dateString;
+      const options = { year: 'numeric', month: 'long', day: 'numeric' };
+      return date.toLocaleDateString('id-ID', options);
+    } catch(e) {
+      return dateString;
+    }
   }
 };
 

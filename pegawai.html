@@ -59,6 +59,9 @@
           <a class="nav-link" href="geofencing.html"><i class="bi bi-geo-alt-fill"></i> Geofencing</a>
         </li>
         <li class="nav-item">
+          <a class="nav-link" href="tugas-luar.html"><i class="bi bi-pin-map-fill"></i> Tugas Luar</a>
+        </li>
+        <li class="nav-item">
           <a class="nav-link" href="jam-kerja.html"><i class="bi bi-clock-fill"></i> Jam Kerja</a>
         </li>
         <li class="nav-item">
@@ -175,7 +178,12 @@
               </div>
               <div class="col-md-6">
                 <label class="form-label">Password</label>
-                <input type="password" class="form-control" id="p_password" required>
+                <input type="password" class="form-control" id="p_password" placeholder="Kosongkan jika tidak ingin diubah">
+              </div>
+              <div class="col-12 mt-3">
+                <label class="form-label text-danger fw-bold"><i class="bi bi-shield-lock-fill me-1"></i>Pesan Blokir (Opsional)</label>
+                <textarea id="p_pesan_blokir" class="form-control border-danger" rows="2" placeholder="Isi pesan ini untuk memblokir akses absensi pegawai..."></textarea>
+                <div class="form-text text-muted small">Kosongkan jika pegawai aktif secara normal.</div>
               </div>
             </div>
             <div class="text-end mt-4">

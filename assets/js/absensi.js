@@ -12,6 +12,30 @@ document.addEventListener('DOMContentLoaded', () => {
     titleEl.innerText = `Pemindaian Wajah (${userName})`;
   }
 
+  // Cek apakah akun terblokir
+  const rawData = localStorage.getItem('userData');
+  if (rawData) {
+    try {
+      const uData = JSON.parse(rawData);
+      if (uData.pesanBlokir && uData.pesanBlokir.trim() !== '') {
+        const blokirContainer = document.getElementById('blokirAlertContainer');
+        const blokirText = document.getElementById('blokirMessageText');
+        const cameraContainer = document.getElementById('mainCameraContainer');
+        const actionContainer = document.getElementById('actionButtonsContainer');
+        
+        if (blokirContainer && blokirText) {
+          blokirText.innerText = "Pesan Admin: " + uData.pesanBlokir;
+          blokirContainer.classList.remove('d-none');
+        }
+        if (cameraContainer) cameraContainer.classList.add('d-none');
+        if (actionContainer) actionContainer.classList.add('d-none');
+        
+        // Jangan inisialisasi kamera & maps jika diblokir
+        return;
+      }
+    } catch (e) {}
+  }
+
   initCamera();
   
   App.fetchAPI('getDatabase', {}, 'GET').then(res => {
@@ -37,6 +61,32 @@ document.addEventListener('DOMContentLoaded', () => {
             if (a.status === 'Pulang') hasAbsenPulang = true;
           }
         });
+      }
+      
+      // Cek ulang status blokir secara real-time dari database
+      if (res.data.users) {
+        const userId = localStorage.getItem('userId');
+        const currentUser = res.data.users.find(u => u.username === userId);
+        if (currentUser && currentUser.pesanBlokir && currentUser.pesanBlokir.trim() !== '') {
+          const blokirContainer = document.getElementById('blokirAlertContainer');
+          const blokirText = document.getElementById('blokirMessageText');
+          const cameraContainer = document.getElementById('mainCameraContainer');
+          const actionContainer = document.getElementById('actionButtonsContainer');
+          
+          if (blokirContainer && blokirText) {
+            blokirText.innerText = "Pesan Admin: " + currentUser.pesanBlokir;
+            blokirContainer.classList.remove('d-none');
+          }
+          if (cameraContainer) cameraContainer.classList.add('d-none');
+          if (actionContainer) actionContainer.classList.add('d-none');
+          
+          // Stop kamera jika sedang menyala
+          const video = document.getElementById('camera');
+          if (video && video.srcObject) {
+            video.srcObject.getTracks().forEach(track => track.stop());
+          }
+          return; // Jangan lanjutkan init map
+        }
       }
     }
     initMap();

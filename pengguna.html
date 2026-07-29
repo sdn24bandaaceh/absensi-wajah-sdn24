@@ -58,6 +58,9 @@
           <a class="nav-link" href="geofencing.html"><i class="bi bi-geo-alt-fill"></i> Geofencing</a>
         </li>
         <li class="nav-item">
+          <a class="nav-link" href="tugas-luar.html"><i class="bi bi-pin-map-fill"></i> Tugas Luar</a>
+        </li>
+        <li class="nav-item">
           <a class="nav-link" href="jam-kerja.html"><i class="bi bi-clock-fill"></i> Jam Kerja</a>
         </li>
         <li class="nav-item">
@@ -125,7 +128,7 @@
     <div class="modal-dialog">
       <div class="modal-content glass-card">
         <div class="modal-header border-0">
-          <h5 class="modal-title fw-bold">Tambah Pengguna Baru</h5>
+          <h5 class="modal-title fw-bold" id="modalUserTitle">Tambah Pengguna Baru</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
@@ -149,6 +152,11 @@
                 <option value="Kepala Sekolah">Kepala Sekolah</option>
                 <option value="Admin">Administrator</option>
               </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label text-danger fw-bold"><i class="bi bi-shield-lock-fill me-1"></i>Pesan Blokir (Opsional)</label>
+              <textarea id="u_pesan_blokir" class="form-control form-control-md3 border-danger" rows="2" placeholder="Isi pesan ini untuk menangguhkan akses absensi pegawai..."></textarea>
+              <div class="form-text text-muted small">Kosongkan jika pegawai aktif normal.</div>
             </div>
           </form>
         </div>
