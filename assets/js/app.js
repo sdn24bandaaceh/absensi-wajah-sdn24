@@ -1,7 +1,7 @@
 const App = {
   // PENTING: Ganti URL ini dengan URL eksekusi Web App dari Google Apps Script Anda!
   // Contoh: 'https://script.google.com/macros/s/AKfycb.../exec'
-  API_URL: 'https://script.google.com/macros/s/AKfycbyTz21eXrnbxJNF58xXCqHMy5Nqe_2sd73UvTdGdy-1OOeWINTr0NL0RYHGN-3R44m9dw/exec',
+  API_URL: 'https://script.google.com/macros/s/AKfycbwvqUX5Ff42I3jJbvL9npojM9uX3J_Iz-ne3QhTwyzuLiaQqxANY0S4oRMGk68W1whp/exec',
 
   init() {
     this.initDarkMode();
@@ -30,61 +30,61 @@ const App = {
       try {
         const profile = JSON.parse(profileStr);
         const logoUrl = this.getDirectImageUrl(profile.logo);
-        
+
         // Update sidebar names
         const sidebarTitles = document.querySelectorAll('.sidebar-header h6');
         sidebarTitles.forEach(el => {
-           if (profile.nama) el.textContent = profile.nama;
+          if (profile.nama) el.textContent = profile.nama;
         });
-        
+
         // Update login page name
         const loginSubtitle = document.querySelector('.login-card p');
         if (loginSubtitle && profile.nama) {
           loginSubtitle.textContent = profile.nama;
         }
-        
+
         // Update logo in sidebar
         const sidebarIcons = document.querySelectorAll('.sidebar-header i.bi-shield-lock-fill');
         sidebarIcons.forEach(el => {
-           if (logoUrl) {
-             const img = document.createElement('img');
-             img.src = logoUrl;
-             img.style.width = '40px';
-             img.style.height = '40px';
-             img.style.objectFit = 'contain';
-             img.className = 'me-2';
-             el.parentNode.replaceChild(img, el);
-           }
+          if (logoUrl) {
+            const img = document.createElement('img');
+            img.src = logoUrl;
+            img.style.width = '40px';
+            img.style.height = '40px';
+            img.style.objectFit = 'contain';
+            img.className = 'me-2';
+            el.parentNode.replaceChild(img, el);
+          }
         });
-        
+
         // Update existing img logo in sidebar
         const sidebarImgs = document.querySelectorAll('.sidebar-header img.me-2');
         sidebarImgs.forEach(el => {
-           if (logoUrl) el.src = logoUrl;
+          if (logoUrl) el.src = logoUrl;
         });
-        
+
         // Update logo in login page
         const loginIcon = document.querySelector('.login-card .bi-shield-lock');
         if (loginIcon && logoUrl) {
-           const img = document.createElement('img');
-           img.src = logoUrl;
-           img.style.width = '80px';
-           img.style.height = '80px';
-           img.style.objectFit = 'contain';
-           img.className = 'mb-2';
-           loginIcon.parentNode.replaceChild(img, loginIcon);
+          const img = document.createElement('img');
+          img.src = logoUrl;
+          img.style.width = '80px';
+          img.style.height = '80px';
+          img.style.objectFit = 'contain';
+          img.className = 'mb-2';
+          loginIcon.parentNode.replaceChild(img, loginIcon);
         }
         // Update existing img logo in login page
         const loginImg = document.querySelector('.login-card img.mb-2');
         if (loginImg && logoUrl) {
-           loginImg.src = logoUrl;
+          loginImg.src = logoUrl;
         }
-        
+
         // Update document title
         if (profile.nama) {
           document.title = document.title.replace('SDN 24 Banda Aceh', profile.nama).replace('SD Negeri 24 Banda Aceh', profile.nama);
         }
-      } catch(e) {}
+      } catch (e) { }
     }
   },
 
@@ -93,7 +93,7 @@ const App = {
       // Inject admin token and user ID if available
       const userId = localStorage.getItem('userId');
       const adminToken = localStorage.getItem('adminToken');
-      
+
       if (userId && !payload.requestUserId) payload.requestUserId = userId;
       if (adminToken && !payload.adminToken) payload.adminToken = adminToken;
 
@@ -182,19 +182,19 @@ const App = {
     const userName = localStorage.getItem('userName') || 'User';
     const userRole = localStorage.getItem('userRole') || 'pegawai';
     const userId = localStorage.getItem('userId') || '';
-    
+
     const displayNameEl = document.getElementById('displayName');
     if (displayNameEl && userName !== 'Admin' && userName !== 'User') {
       displayNameEl.textContent = userName.charAt(0).toUpperCase() + userName.slice(1);
     }
-    
+
     const displayRoleEl = document.querySelector('.user-profile small.text-muted');
     if (displayRoleEl) {
       if (userRole === 'superadmin') displayRoleEl.textContent = 'Super Admin';
       else if (userRole === 'admin') displayRoleEl.textContent = 'Administrator';
       else displayRoleEl.textContent = 'Pegawai';
     }
-    
+
     const userAvatarEl = document.querySelector('.user-profile img');
     if (userAvatarEl) {
       userAvatarEl.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=0D8ABC&color=fff`;
@@ -309,14 +309,14 @@ const App = {
     let userData = {};
     try {
       userData = JSON.parse(localStorage.getItem('userData') || '{}');
-    } catch (e) {}
+    } catch (e) { }
 
     document.getElementById('myProfileRoleBadge').textContent = userRole.toUpperCase();
     document.getElementById('inputMyProfileNama').value = userData.nama || userName;
     document.getElementById('inputMyProfileNip').value = userData.nip || (userId.match(/^\d+$/) ? userId : '');
     document.getElementById('inputMyProfilePangkat').value = userData.pangkat || '';
     document.getElementById('inputMyProfileUsername').value = userData.username || userId;
-    
+
     let fUrl = userData.foto;
     if (fUrl && fUrl.includes('/d/')) fUrl = this.getDirectImageUrl(fUrl);
     document.getElementById('myProfileAvatarPreview').src = fUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.nama || userName)}&background=0D8ABC&color=fff&size=90`;
@@ -334,7 +334,7 @@ const App = {
           const elPangkat = document.getElementById('inputMyProfilePangkat');
           const elUname = document.getElementById('inputMyProfileUsername');
           const elImg = document.getElementById('myProfileAvatarPreview');
-          
+
           if (elNama && document.activeElement !== elNama) elNama.value = u.nama || '';
           if (elNip && document.activeElement !== elNip) elNip.value = u.nip || '';
           if (elPangkat && document.activeElement !== elPangkat) elPangkat.value = u.pangkat || '';
@@ -391,16 +391,16 @@ const App = {
 
       if (res && res.success) {
         this.showToast('Profil berhasil diperbarui!', 'success');
-        
+
         if (res.user) {
           localStorage.setItem('userName', res.user.nama || res.user.username);
           localStorage.setItem('userId', res.user.username);
           localStorage.setItem('userRole', res.user.role || 'pegawai');
           localStorage.setItem('userData', JSON.stringify(res.user));
-          
+
           const displayNameEl = document.getElementById('displayName');
           if (displayNameEl) displayNameEl.textContent = res.user.nama;
-          
+
           const userAvatarEl = document.querySelector('.user-profile img');
           if (userAvatarEl) {
             let fUrl = res.user.foto;
@@ -437,12 +437,12 @@ const App = {
     const currentPath = window.location.pathname;
     const currentPage = currentPath.split('/').pop();
     const adminPages = [
-      'pegawai.html', 'rekapitulasi.html', 'laporan.html', 
-      'geofencing.html', 'jam-kerja.html', 'hari-libur.html', 
+      'pegawai.html', 'rekapitulasi.html', 'laporan.html',
+      'geofencing.html', 'jam-kerja.html', 'hari-libur.html',
       'pengguna.html', 'pengaturan.html'
     ];
     const userRole = localStorage.getItem('userRole') || 'pegawai';
-    
+
     if (adminPages.includes(currentPage) && userRole !== 'admin' && userRole !== 'superadmin') {
       this.showToast('Anda tidak memiliki akses ke halaman ini', 'error');
       setTimeout(() => {
@@ -457,10 +457,10 @@ const App = {
 
     const sidebarNav = document.querySelector('.sidebar .nav, #sidebar .nav, .nav-pills, .nav');
     if (!sidebarNav) return;
-    
+
     let shouldHide = false;
     const items = sidebarNav.querySelectorAll('.nav-item, a.nav-link');
-    
+
     items.forEach(item => {
       const text = item.textContent || '';
       if (text.includes('MANAJEMEN') || text.includes('PENGATURAN')) {
@@ -486,7 +486,7 @@ const App = {
       if (isNaN(date.getTime())) return dateString;
       const options = { year: 'numeric', month: 'long', day: 'numeric' };
       return date.toLocaleDateString('id-ID', options);
-    } catch(e) {
+    } catch (e) {
       return dateString;
     }
   }
