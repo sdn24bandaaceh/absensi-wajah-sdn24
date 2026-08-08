@@ -88,6 +88,32 @@ const App = {
     }
   },
 
+  clearDatabaseCache() {
+    localStorage.removeItem('app_database');
+    localStorage.removeItem('app_database_time');
+  },
+
+  async getDatabase(forceRefresh = false) {
+    const cached = localStorage.getItem('app_database');
+    const cacheTime = localStorage.getItem('app_database_time');
+    const now = new Date().getTime();
+    
+    // Gunakan cache lokal jika umurnya belum 5 menit (300000 ms)
+    if (!forceRefresh && cached && cacheTime && (now - parseInt(cacheTime) < 300000)) {
+      try {
+        return JSON.parse(cached);
+      } catch(e) { }
+    }
+    
+    // Jika tidak ada di cache atau kadaluarsa, ambil dari server
+    const response = await this.fetchAPI('getDatabase', {}, 'GET');
+    if (response && response.success) {
+      localStorage.setItem('app_database', JSON.stringify(response));
+      localStorage.setItem('app_database_time', now.toString());
+    }
+    return response;
+  },
+
   async fetchAPI(action, payload = {}, method = 'POST') {
     try {
       // Inject admin token and user ID if available
@@ -109,7 +135,14 @@ const App = {
             'Content-Type': 'text/plain;charset=utf-8',
           }
         });
-        return await response.json();
+        const result = await response.json();
+        
+        // Auto-clear local cache jika ada aksi penulisan data yang sukses
+        if (result && result.success) {
+          this.clearDatabaseCache();
+        }
+        
+        return result;
       }
     } catch (error) {
       console.error('API Error:', error);
