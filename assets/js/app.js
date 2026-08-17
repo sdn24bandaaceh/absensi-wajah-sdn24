@@ -472,7 +472,7 @@ const App = {
     const adminPages = [
       'pegawai.html', 'rekapitulasi.html', 'laporan.html',
       'geofencing.html', 'jam-kerja.html', 'hari-libur.html',
-      'pengguna.html', 'pengaturan.html'
+      'pengguna.html', 'pengaturan.html', 'foto-absensi.html'
     ];
     const userRole = localStorage.getItem('userRole') || 'pegawai';
 
@@ -498,14 +498,25 @@ const App = {
       const text = item.textContent || '';
       if (text.includes('MANAJEMEN') || text.includes('PENGATURAN')) {
         shouldHide = true;
-        item.style.display = 'none';
-        return;
+      } else if (item.tagName === 'LI' && item.classList.contains('text-muted')) {
+        shouldHide = false;
       }
+      
+      // Sembunyikan menu manajemen & pengaturan
+      if (shouldHide && item.tagName === 'LI') {
+        item.style.display = 'none';
+      }
+      
+      // Khusus untuk fitur Foto Absensi yang berada di luar grup MANAJEMEN, sembunyikan untuk non-admin
+      if (item.tagName === 'LI' && item.innerHTML.includes('foto-absensi.html')) {
+        item.style.display = 'none';
+      }
+
       if (text.includes('Logout')) {
         shouldHide = false;
         return;
       }
-      if (shouldHide || text.includes('Profil Sekolah') || text.includes('Pengaturan Sistem') || text.includes('Data Pegawai') || text.includes('Rekapitulasi') || text.includes('Laporan') || text.includes('Geofencing') || text.includes('Jam Kerja') || text.includes('Hari Libur') || text.includes('Pengguna') || text.includes('Absen Manual')) {
+      if (shouldHide || text.includes('Profil Sekolah') || text.includes('Pengaturan Sistem') || text.includes('Data Pegawai') || text.includes('Rekapitulasi') || text.includes('Laporan') || text.includes('Geofencing') || text.includes('Jam Kerja') || text.includes('Hari Libur') || text.includes('Pengguna') || text.includes('Absen Manual') || text.includes('Foto Absensi')) {
         item.style.display = 'none';
         if (item.closest('.nav-item')) item.closest('.nav-item').style.display = 'none';
       }
