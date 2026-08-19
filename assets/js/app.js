@@ -1,7 +1,8 @@
 const App = {
   // PENTING: Ganti URL ini dengan URL eksekusi Web App dari Google Apps Script Anda!
   // Contoh: 'https://script.google.com/macros/s/AKfycb.../exec'
-  API_URL: 'https://script.google.com/macros/s/AKfycbyTz21eXrnbxJNF58xXCqHMy5Nqe_2sd73UvTdGdy-1OOeWINTr0NL0RYHGN-3R44m9dw/exec',
+  // API_URL: 'https://script.google.com/macros/s/AKfycbyTz21eXrnbxJNF58xXCqHMy5Nqe_2sd73UvTdGdy-1OOeWINTr0NL0RYHGN-3R44m9dw/exec',
+  API_URL: 'https://absensikula.online/api.php',
 
   init() {
     this.initDarkMode();

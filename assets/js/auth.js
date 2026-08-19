@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
             App.clearDatabaseCache();
             App.showToast('Login berhasil! Mengalihkan...', 'success');
             
-            const user = response.user;
+            const user = response.data || response.user;
             let role = 'pegawai';
             const uname = user.username ? user.username.toLowerCase() : '';
             const userRole = user.role ? user.role.toLowerCase() : '';
