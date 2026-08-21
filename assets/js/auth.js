@@ -1,4 +1,16 @@
 document.addEventListener('DOMContentLoaded', () => {
+  // Ambil nama sekolah sebelum login
+  if (window.location.pathname.includes('login.html') || window.location.pathname === '/' || window.location.pathname === '') {
+    App.fetchAPI('get_school_profile', {}, 'GET')
+      .then(response => {
+        if (response && response.success && response.data) {
+          localStorage.setItem('schoolProfile', JSON.stringify(response.data));
+          App.applySchoolProfile();
+        }
+      })
+      .catch(err => console.log('Gagal memuat profil sekolah:', err));
+  }
+
   const loginForm = document.getElementById('loginForm');
   
   if (loginForm) {

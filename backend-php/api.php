@@ -184,12 +184,34 @@ try {
                 if (strtolower($user['status']) === 'blokir' || strtolower($user['status']) === 'nonaktif') {
                     jsonResponse(false, "Akun Anda telah dinonaktifkan: " . $user['pesan_blokir']);
                 }
+                
+                // Ambil profil sekolah
+                $stmt = $pdo->query("SELECT * FROM settings");
+                $settingsData = $stmt->fetchAll();
+                $settings = [];
+                foreach ($settingsData as $row) {
+                    $settings[$row['key_name']] = $row['value'];
+                }
+                
                 // Hapus password dari respons demi keamanan
                 unset($user['password']);
-                jsonResponse(true, "Login berhasil", $user);
+                jsonResponse(true, "Login berhasil", ['user' => $user, 'schoolProfile' => $settings]);
             } else {
                 jsonResponse(false, "Username atau password salah");
             }
+            break;
+
+        // ==========================================
+        // 2B. GET PROFIL SEKOLAH (UNTUK HALAMAN LOGIN)
+        // ==========================================
+        case 'get_school_profile':
+            $stmt = $pdo->query("SELECT * FROM settings");
+            $settingsData = $stmt->fetchAll();
+            $settings = [];
+            foreach ($settingsData as $row) {
+                $settings[$row['key_name']] = $row['value'];
+            }
+            jsonResponse(true, "Profil sekolah berhasil dimuat", $settings);
             break;
 
         // ==========================================
