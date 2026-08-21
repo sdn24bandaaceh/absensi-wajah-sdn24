@@ -190,7 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let displayPhoto = photoItem.photo;
         let photoHtml = '';
         if (displayPhoto && displayPhoto !== 'null' && displayPhoto !== 'undefined' && displayPhoto.trim() !== '') {
-            if (displayPhoto.includes('/d/')) displayPhoto = App.getDirectImageUrl(displayPhoto);
+            displayPhoto = App.getDirectImageUrl(displayPhoto);
             photoHtml = `<img src="${displayPhoto}" alt="Foto ${u.nama}" loading="lazy" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(u.nama)}&background=f1f5f9'">`;
         } else {
             photoHtml = `<div class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light text-primary" style="font-size: 1.2rem; font-weight: bold;"><div>Absen</div><div>Manual</div></div>`;
@@ -314,7 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     targetUsers.forEach(u => {
       let avatar = u.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.nama)}&background=f1f5f9`;
-      if (avatar.includes('/d/')) avatar = App.getDirectImageUrl(avatar);
+      avatar = App.getDirectImageUrl(avatar);
       
       let rowHtml = `
         <tr>
@@ -342,7 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
           let thumbHtml = '';
           
           if (thumbSrc && thumbSrc !== 'null' && thumbSrc !== 'undefined' && thumbSrc.trim() !== '') {
-            if (thumbSrc.includes('/d/')) thumbSrc = App.getDirectImageUrl(thumbSrc);
+            thumbSrc = App.getDirectImageUrl(thumbSrc);
             thumbHtml = `<img src="${thumbSrc}" class="tiny-thumb" alt="Foto" loading="lazy" onerror="this.outerHTML='<div class=\\'tiny-thumb d-flex flex-column align-items-center justify-content-center bg-light text-primary border\\' style=\\'font-size: 0.6rem; font-weight: bold; line-height: 1;\\'><span>Manual</span></div>'">`;
           } else {
             thumbHtml = `<div class="tiny-thumb d-flex flex-column align-items-center justify-content-center bg-light text-primary border" style="font-size: 0.6rem; font-weight: bold; line-height: 1;"><span>Manual</span></div>`;
@@ -416,7 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('previewRole').textContent = (u.pangkat || 'Pegawai') + (u.nip ? ' / ' + u.nip : '');
       
       let avatar = u.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.nama)}&background=f1f5f9`;
-      if (avatar.includes('/d/')) avatar = App.getDirectImageUrl(avatar);
+      avatar = App.getDirectImageUrl(avatar);
       document.getElementById('previewAvatar').src = avatar;
       
       // Date Display
@@ -426,15 +426,18 @@ document.addEventListener('DOMContentLoaded', () => {
       // Masuk Reset
       const imgMasuk = document.getElementById('previewFotoMasuk');
       const noMasuk = document.getElementById('noFotoMasuk');
-      if (masuk && masuk.photo) {
-        imgMasuk.style.display = 'block';
-        noMasuk.style.display = 'none';
-        let src = masuk.photo;
-        if (src.includes('/d/')) src = App.getDirectImageUrl(src);
-        imgMasuk.src = src;
-        
+      if (masuk) {
         document.getElementById('previewWaktuMasuk').textContent = new Date(masuk.timestamp).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
         document.getElementById('previewStatusMasuk').textContent = (masuk.status === 'Telat' || masuk.keterangan === 'Telat') ? 'Terlambat' : 'Tepat Waktu';
+        
+        if (masuk.photo && masuk.photo !== 'null' && masuk.photo !== 'undefined' && masuk.photo.trim() !== '') {
+          imgMasuk.style.display = 'block';
+          noMasuk.style.display = 'none';
+          imgMasuk.src = App.getDirectImageUrl(masuk.photo);
+        } else {
+          imgMasuk.style.display = 'none';
+          noMasuk.style.display = 'flex';
+        }
       } else {
         imgMasuk.style.display = 'none';
         noMasuk.style.display = 'flex';
@@ -445,14 +448,17 @@ document.addEventListener('DOMContentLoaded', () => {
       // Pulang Reset
       const imgPulang = document.getElementById('previewFotoPulang');
       const noPulang = document.getElementById('noFotoPulang');
-      if (pulang && pulang.photo) {
-        imgPulang.style.display = 'block';
-        noPulang.style.display = 'none';
-        let src = pulang.photo;
-        if (src.includes('/d/')) src = App.getDirectImageUrl(src);
-        imgPulang.src = src;
-        
+      if (pulang) {
         document.getElementById('previewWaktuPulang').textContent = new Date(pulang.timestamp).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
+        
+        if (pulang.photo && pulang.photo !== 'null' && pulang.photo !== 'undefined' && pulang.photo.trim() !== '') {
+          imgPulang.style.display = 'block';
+          noPulang.style.display = 'none';
+          imgPulang.src = App.getDirectImageUrl(pulang.photo);
+        } else {
+          imgPulang.style.display = 'none';
+          noPulang.style.display = 'flex';
+        }
       } else {
         imgPulang.style.display = 'none';
         noPulang.style.display = 'flex';

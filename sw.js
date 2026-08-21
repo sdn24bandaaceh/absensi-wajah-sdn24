@@ -26,11 +26,21 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('fetch', event => {
+  // Hanya proses metode GET. POST (seperti form/login/absen) tidak boleh dicache.
+  if (event.request.method !== 'GET') return;
+
   event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // Return cache or network fallback
-        return response || fetch(event.request);
+    fetch(event.request)
+      .then(networkResponse => {
+        // Simpan ke cache untuk offline
+        return caches.open(CACHE_NAME).then(cache => {
+          cache.put(event.request, networkResponse.clone());
+          return networkResponse;
+        });
+      })
+      .catch(() => {
+        // Jika offline atau jaringan bermasalah, gunakan cache
+        return caches.match(event.request);
       })
   );
 });

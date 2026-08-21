@@ -186,3 +186,158 @@ function openAddModal() {
   document.getElementById('p_password').required = true;
   $('#modalPegawai').modal('show');
 }
+
+function exportDataPegawai() {
+  if (!window.usersData || window.usersData.length === 0) {
+    App.showToast('Tidak ada data pegawai untuk diekspor', 'warning');
+    return;
+  }
+  
+  if (typeof XLSX === 'undefined') {
+    App.showToast('Library Excel belum termuat, silakan refresh', 'error');
+    return;
+  }
+  
+  // Format Data urut sesuai modal
+  const data = window.usersData.map((u, index) => ({
+    "No": index + 1,
+    "Nama Lengkap": u.nama || '',
+    "NIP": u.nip || '-',
+    "Pangkat/Gol": u.pangkat || '-',
+    "Jabatan": u.jabatan || '-',
+    "Status Kepegawaian": u.status || 'Aktif',
+    "Role Aplikasi": u.role || 'peserta',
+    "Username": u.username || '',
+    "Password": '', // Sengaja dikosongkan
+    "Pesan Blokir (Opsional)": u.pesanBlokir || ''
+  }));
+  
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  
+  // Styling Header menjadi Biru dan Rapi
+  const range = XLSX.utils.decode_range(worksheet['!ref']);
+  for (let C = range.s.c; C <= range.e.c; ++C) {
+    const address = XLSX.utils.encode_col(C) + "1"; // Baris pertama
+    if (!worksheet[address]) continue;
+    worksheet[address].s = {
+      fill: { fgColor: { rgb: "1D4ED8" } }, // Biru Modern (Tailwind Blue-700)
+      font: { color: { rgb: "FFFFFF" }, bold: true, sz: 12 },
+      alignment: { horizontal: "center", vertical: "center" }
+    };
+  }
+  
+  // Mengatur lebar kolom agar rapi saat dibuka
+  worksheet['!cols'] = [
+    { wch: 5 },  // No
+    { wch: 30 }, // Nama Lengkap
+    { wch: 20 }, // NIP
+    { wch: 15 }, // Pangkat/Gol
+    { wch: 25 }, // Jabatan
+    { wch: 20 }, // Status Kepegawaian
+    { wch: 15 }, // Role Aplikasi
+    { wch: 20 }, // Username
+    { wch: 15 }, // Password
+    { wch: 40 }  // Pesan Blokir
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Data Pegawai");
+  
+  // Trigger Download
+  XLSX.writeFile(workbook, `Data_Pegawai_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
+function importDataPegawai(input) {
+  const file = input.files[0];
+  if (!file) return;
+  
+  if (typeof XLSX === 'undefined') {
+    App.showToast('Library Excel belum termuat, silakan refresh', 'error');
+    return;
+  }
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, {type: 'array'});
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      
+      const rows = XLSX.utils.sheet_to_json(firstSheet, {defval: ""});
+      
+      if (rows.length === 0) {
+        App.showToast('File Excel kosong', 'error');
+        input.value = '';
+        return;
+      }
+      
+      let parsedUsers = [];
+      
+      rows.forEach(row => {
+        // Ambil property dinamis
+        const getVal = (key) => {
+          let foundKey = Object.keys(row).find(k => k.toLowerCase().includes(key.toLowerCase()));
+          return foundKey ? String(row[foundKey]).trim() : '';
+        };
+        
+        let username = getVal('username');
+        if (!username) return; // Wajib
+        
+        let password = getVal('password');
+        if (!password) password = '123456';
+        
+        parsedUsers.push({
+          username: username,
+          password: password,
+          nama: getVal('nama') || '',
+          nip: getVal('nip') || '-',
+          jabatan: getVal('jabatan') || '-',
+          pangkat: getVal('pangkat') || getVal('gol') || '-',
+          status: getVal('status') || 'Aktif',
+          role: getVal('role') || 'peserta',
+          pesanBlokir: getVal('pesan') || ''
+        });
+      });
+      
+      if (parsedUsers.length === 0) {
+         App.showToast('Tidak ada data valid yang bisa diimpor', 'error');
+         input.value = '';
+         return;
+      }
+      
+      Swal.fire({
+        title: 'Konfirmasi Impor Excel',
+        text: `Ditemukan ${parsedUsers.length} data pegawai. Yakin ingin mengimpor data ini? (Username yang sama akan tertimpa)`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Proses Impor',
+        cancelButtonText: 'Batal'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          Swal.fire({
+            title: 'Memproses...',
+            html: 'Mohon tunggu sementara data Excel diimpor.',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+          });
+          
+          App.fetchAPI('importUsersMassal', { users: parsedUsers }, 'POST').then(res => {
+             if (res && res.success) {
+                Swal.fire('Berhasil', res.message, 'success').then(() => location.reload());
+             } else {
+                Swal.fire('Gagal', res.message || 'Terjadi kesalahan', 'error');
+             }
+          }).catch(err => {
+             Swal.fire('Error', 'Koneksi ke server gagal', 'error');
+          });
+        }
+        input.value = ''; // Reset input
+      });
+    } catch (err) {
+       App.showToast('Gagal membaca file Excel', 'error');
+       input.value = '';
+    }
+  };
+  
+  reader.readAsArrayBuffer(file);
+}

@@ -1,8 +1,15 @@
 const App = {
-  // PENTING: Ganti URL ini dengan URL eksekusi Web App dari Google Apps Script Anda!
-  // Contoh: 'https://script.google.com/macros/s/AKfycb.../exec'
-  // API_URL: 'https://script.google.com/macros/s/AKfycbyTz21eXrnbxJNF58xXCqHMy5Nqe_2sd73UvTdGdy-1OOeWINTr0NL0RYHGN-3R44m9dw/exec',
-  API_URL: 'https://absensikula.online/api.php',
+  // URL Backend Dinamis (Multi-Tenant SaaS)
+  // Otomatis mendeteksi subdomain tempat aplikasi berjalan
+  API_URL: (() => {
+    const host = window.location.hostname;
+    // Jika berjalan di localhost (tes lokal), arahkan ke domain utama
+    if (host === 'localhost' || host === '127.0.0.1' || host === '') {
+      return 'https://absensikula.online/api.php';
+    }
+    // Jika di production, gunakan subdomain secara otomatis (misal: sdn1bna.absensikula.online)
+    return `https://${host}/api.php`;
+  })(),
 
   init() {
     this.initDarkMode();
@@ -16,13 +23,21 @@ const App = {
 
   getDirectImageUrl(url) {
     if (!url) return '';
-    // Convert Google Drive view URL to direct image URL
-    const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-    if (match && match[1]) {
-      // Menggunakan URL thumbnail yang lebih stabil untuk tag <img>
-      return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w500`;
+    
+    if (url.startsWith('http') || url.startsWith('data:')) {
+      // Convert Google Drive view URL to direct image URL
+      const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) {
+        // Menggunakan URL thumbnail yang lebih stabil untuk tag <img>
+        return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w500`;
+      }
+      return url;
     }
-    return url;
+    
+    // Jika path relatif dari server (misal: uploads/profiles/...)
+    // Tambahkan domain server Hostinger di depannya!
+    const backendDomain = this.API_URL.replace('/api.php', '');
+    return `${backendDomain}/${url}`;
   },
 
   applySchoolProfile() {
@@ -356,7 +371,7 @@ const App = {
     document.getElementById('inputMyProfileUsername').value = userData.username || userId;
 
     let fUrl = userData.foto;
-    if (fUrl && fUrl.includes('/d/')) fUrl = this.getDirectImageUrl(fUrl);
+    if (fUrl) fUrl = this.getDirectImageUrl(fUrl);
     document.getElementById('myProfileAvatarPreview').src = fUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.nama || userName)}&background=0D8ABC&color=fff&size=90`;
 
     const bsModal = new bootstrap.Modal(modalEl);
@@ -379,7 +394,7 @@ const App = {
           if (elUname && document.activeElement !== elUname) elUname.value = u.username || '';
           if (elImg && !this._tempProfileFotoBase64) {
             let uFoto = u.foto;
-            if (uFoto && uFoto.includes('/d/')) uFoto = this.getDirectImageUrl(uFoto);
+            if (uFoto) uFoto = this.getDirectImageUrl(uFoto);
             elImg.src = uFoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.nama || userName)}&background=0D8ABC&color=fff&size=90`;
           }
         }
@@ -442,7 +457,7 @@ const App = {
           const userAvatarEl = document.querySelector('.user-profile img');
           if (userAvatarEl) {
             let fUrl = res.user.foto;
-            if (fUrl && fUrl.includes('/d/')) fUrl = this.getDirectImageUrl(fUrl);
+            if (fUrl) fUrl = this.getDirectImageUrl(fUrl);
             userAvatarEl.src = fUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(res.user.nama)}&background=0D8ABC&color=fff`;
           }
         }

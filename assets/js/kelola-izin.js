@@ -96,7 +96,8 @@ function renderTable(permits) {
       `;
     }
 
-    let attachmentLink = p.fileData ? `<a href="${p.fileData}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-paperclip"></i> Lihat</a>` : '<span class="text-muted small">Tidak ada</span>';
+    let attachmentUrl = p.fileData ? App.getDirectImageUrl(p.fileData) : '';
+    let attachmentLink = attachmentUrl ? `<a href="${attachmentUrl}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-paperclip"></i> Lihat</a>` : '<span class="text-muted small">Tidak ada</span>';
 
     // Simpan data mentah di atribut element atau object global untuk edit
     // Kita panggil window.allPermits untuk akses mudah

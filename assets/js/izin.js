@@ -18,8 +18,8 @@ $(document).ready(function() {
         
         table.clear();
         permits.forEach(p => {
-          // If pegawai, only show their own
-          if (role !== 'admin' && p.username !== currentUsername) return;
+          // Hanya tampilkan riwayat milik diri sendiri (bahkan jika login sebagai admin)
+          if (p.username !== currentUsername) return;
           
           let statusBadge = '';
           if (p.status.includes('Menunggu')) statusBadge = `<span class="badge bg-warning text-dark"><i class="bi bi-hourglass me-1"></i> ${p.status}</span>`;
@@ -28,22 +28,20 @@ $(document).ready(function() {
           
           let actions = `<button class="btn btn-sm btn-light" onclick="viewPermit('${p.fileData}')"><i class="bi bi-eye"></i></button>`;
           if (p.status.includes('Menunggu')) {
-             if (role === 'admin') {
-               actions += `
-                 <button class="btn btn-sm btn-success ms-1" onclick="updateStatus('${p.id}', 'Disetujui')" title="Setujui"><i class="bi bi-check-lg"></i></button>
-                 <button class="btn btn-sm btn-danger ms-1" onclick="updateStatus('${p.id}', 'Ditolak')" title="Tolak"><i class="bi bi-x-lg"></i></button>
-               `;
-             } else {
-               actions += ` <button class="btn btn-sm btn-danger text-white ms-1" disabled title="Menunggu admin"><i class="bi bi-trash"></i></button>`;
-             }
+             // Dihapus tombol setuju/tolak dari sini agar admin fokus mengelola di halaman Kelola Izin
+             actions += ` <button class="btn btn-sm btn-secondary ms-1" disabled title="Menunggu persetujuan"><i class="bi bi-hourglass-split"></i></button>`;
           }
           
           // Tanggal Mulai dan Selesai
           const tglMulai = p.tanggalMulai ? new Date(p.tanggalMulai).toLocaleDateString('id-ID') : '-';
           const tglSelesai = p.tanggalSelesai ? new Date(p.tanggalSelesai).toLocaleDateString('id-ID') : '-';
 
+          // Format tanggal pengajuan
+          const tglPengajuan = p.tanggalPengajuan ? new Date(p.tanggalPengajuan).toLocaleDateString('id-ID', {day:'2-digit', month:'short', year:'numeric'}) : '-';
+
           table.row.add([
-            tglMulai, 
+            tglPengajuan,
+            `<span class="fw-bold">${p.nama || p.username}</span>`,
             `<span class="badge bg-info">${p.tipe}</span>`,
             `${tglMulai} s/d ${tglSelesai}`,
             statusBadge,
@@ -100,7 +98,12 @@ $(document).ready(function() {
     const payload = {
        username: localStorage.getItem('userId') || 'user_demo',
        nama: localStorage.getItem('userName') || 'User Demo',
-       tipe, mulai, selesai, alasan, fileData, fileName
+       tipe: tipe, 
+       tanggalMulai: mulai, 
+       tanggalSelesai: selesai, 
+       alasan: alasan, 
+       fileData: fileData, 
+       fileName: fileName
     };
     
     App.fetchAPI('submitPermit', payload, 'POST').then(res => {
@@ -131,8 +134,9 @@ $(document).ready(function() {
 });
 
 window.viewPermit = function(url) {
-  if (url && url.startsWith('http')) {
-     window.open(url, '_blank');
+  const finalUrl = App.getDirectImageUrl(url);
+  if (finalUrl && finalUrl.startsWith('http')) {
+     window.open(finalUrl, '_blank');
   } else {
      Swal.fire('Info', 'File tidak tersedia atau masih dalam proses', 'info');
   }

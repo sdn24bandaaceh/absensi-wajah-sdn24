@@ -113,11 +113,21 @@
 
     <div class="container-fluid p-0">
       <div class="glass-card p-4" data-aos="fade-up">
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
           <h5 class="fw-bold mb-0">Daftar Pegawai Aktif</h5>
-          <button class="btn btn-primary-custom hover-scale" onclick="openAddModal()">
-            <i class="bi bi-person-plus-fill me-2"></i> Tambah Pegawai
-          </button>
+          <div class="d-flex gap-2">
+            <button class="btn btn-success hover-scale" onclick="exportDataPegawai()">
+              <i class="bi bi-file-earmark-excel me-1"></i> Ekspor Excel
+            </button>
+            <button class="btn btn-primary hover-scale" onclick="document.getElementById('importCsvInput').click()">
+              <i class="bi bi-file-earmark-arrow-up me-1"></i> Impor Excel
+            </button>
+            <input type="file" id="importCsvInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="importDataPegawai(this)">
+            
+            <button class="btn btn-primary-custom hover-scale" onclick="openAddModal()">
+              <i class="bi bi-person-plus-fill me-1"></i> Tambah Pegawai
+            </button>
+          </div>
         </div>
         
         <div class="table-responsive">
@@ -217,6 +227,8 @@
   <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
   <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.all.min.js"></script>
+  <!-- SheetJS (dengan dukungan style/warna) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
   
   <script src="assets/js/app.js"></script>
   <script src="assets/js/auth.js"></script>

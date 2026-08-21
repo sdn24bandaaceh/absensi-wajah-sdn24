@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initClock();
   
   // Load data for dashboard
-  if (document.getElementById('statusChart')) {
+  if (document.getElementById('statistikKehadiranContainer') || document.getElementById('statusChart')) {
     loadDashboardData();
   } else {
     animateCounters();
@@ -75,16 +75,31 @@ function loadDashboardData() {
       });
       
       const today = new Date().toISOString().slice(0, 10);
-      let hadir = 0;
-      let terlambat = 0;
+      let hadirUnik = new Set();
+      let absenMasukCount = 0;
+      let absenPulangCount = 0;
+      let terlambatCount = 0;
+      let cepatPulangCount = 0;
       
       data.attendance.forEach(a => {
         if (a.timestamp && a.timestamp.includes(today)) {
-          hadir++;
-          if(a.keterangan && a.keterangan.toLowerCase().includes('terlambat')) terlambat++;
+          hadirUnik.add(a.username);
+          
+          if (a.status === 'Masuk') {
+              absenMasukCount++;
+              if (a.keterangan && a.keterangan.toLowerCase().includes('terlambat')) {
+                  terlambatCount++;
+              }
+          } else if (a.status === 'Pulang') {
+              absenPulangCount++;
+              if (a.keterangan && a.keterangan.toLowerCase().includes('cepat')) {
+                  cepatPulangCount++;
+              }
+          }
         }
       });
       
+      let hadir = hadirUnik.size;
       const belumHadir = Math.max(0, totalPegawai - hadir);
       
       // Update Counters
@@ -92,7 +107,7 @@ function loadDashboardData() {
       if (counters.length >= 4) {
         counters[0].setAttribute('data-target', totalPegawai);
         counters[1].setAttribute('data-target', hadir);
-        counters[2].setAttribute('data-target', terlambat);
+        counters[2].setAttribute('data-target', terlambatCount);
         counters[3].setAttribute('data-target', belumHadir);
       }
       
@@ -109,14 +124,49 @@ function loadDashboardData() {
         if (App.applySchoolProfile) App.applySchoolProfile();
       }
       
-      initCharts(pns, pppk, honorer);
+      // Render Statistik Kehadiran Baru
+      const statContainer = document.getElementById('statistikKehadiranContainer');
+      if (statContainer) {
+          statContainer.innerHTML = `
+            <div class="d-flex align-items-center justify-content-between p-3 rounded bg-success bg-opacity-10 border-start border-4 border-success">
+              <div>
+                <small class="text-success fw-bold d-block mb-1">Absen Masuk</small>
+                <h4 class="mb-0 fw-bold text-success">${absenMasukCount} <span class="fs-6 fw-normal text-muted">Orang</span></h4>
+              </div>
+              <div class="fs-1 text-success opacity-50"><i class="bi bi-box-arrow-in-right"></i></div>
+            </div>
+            
+            <div class="d-flex align-items-center justify-content-between p-3 rounded bg-primary bg-opacity-10 border-start border-4 border-primary">
+              <div>
+                <small class="text-primary fw-bold d-block mb-1">Absen Pulang</small>
+                <h4 class="mb-0 fw-bold text-primary">${absenPulangCount} <span class="fs-6 fw-normal text-muted">Orang</span></h4>
+              </div>
+              <div class="fs-1 text-primary opacity-50"><i class="bi bi-box-arrow-left"></i></div>
+            </div>
+            
+            <div class="d-flex align-items-center justify-content-between p-3 rounded bg-warning bg-opacity-10 border-start border-4 border-warning">
+              <div>
+                <small class="text-warning fw-bold d-block mb-1 text-dark">Terlambat Masuk</small>
+                <h4 class="mb-0 fw-bold text-warning text-dark">${terlambatCount} <span class="fs-6 fw-normal text-muted">Orang</span></h4>
+              </div>
+              <div class="fs-1 text-warning opacity-50"><i class="bi bi-clock-history text-dark"></i></div>
+            </div>
+            
+            <div class="d-flex align-items-center justify-content-between p-3 rounded bg-danger bg-opacity-10 border-start border-4 border-danger">
+              <div>
+                <small class="text-danger fw-bold d-block mb-1">Cepat Pulang</small>
+                <h4 class="mb-0 fw-bold text-danger">${cepatPulangCount} <span class="fs-6 fw-normal text-muted">Orang</span></h4>
+              </div>
+              <div class="fs-1 text-danger opacity-50"><i class="bi bi-speedometer2"></i></div>
+            </div>
+          `;
+      }
+      
       animateCounters();
     } else {
-      initCharts(60, 40, 50); // fallback
       animateCounters();
     }
   }).catch(err => {
-    initCharts(60, 40, 50); // fallback
     animateCounters();
   });
 }
@@ -346,12 +396,22 @@ function renderRingkasanHarian(users, attendance, permits) {
   // Pegawai Izin hari ini
   let izinData = [];
   permits.forEach(p => {
-    if (p.status.includes('Disetujui')) {
+    // BUG FIX: kolomnya adalah status_persetujuan, bukan status
+    if (p.status_persetujuan && p.status_persetujuan.includes('Disetujui')) {
       // Periksa apakah today berada di antara tanggalMulai dan tanggalSelesai
-      const start = new Date(p.tanggalMulai).toISOString().slice(0, 10);
-      const end = new Date(p.tanggalSelesai).toISOString().slice(0, 10);
-      if (today >= start && today <= end) {
-        izinData.push({ nama: p.nama, username: p.username, tipe: p.tipe });
+      const startStr = p.tanggalMulai || p.tanggal_mulai;
+      const endStr = p.tanggalSelesai || p.tanggal_selesai;
+      
+      if (startStr && endStr && startStr !== '0000-00-00') {
+        try {
+          const start = new Date(startStr).toISOString().slice(0, 10);
+          const end = new Date(endStr).toISOString().slice(0, 10);
+          if (today >= start && today <= end) {
+            izinData.push({ nama: p.nama, username: p.username, tipe: p.tipe });
+          }
+        } catch(e) {
+          console.warn('Invalid date in permit:', p);
+        }
       }
     }
   });
