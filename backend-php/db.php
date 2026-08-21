@@ -22,21 +22,27 @@ if ($subdomain !== 'absensikula' && $subdomain !== 'www' && $subdomain !== 'loca
 }
 
 try {
+    // Percobaan 1: Menggunakan Master User
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $user, $password);
-    
-    // Set PDO agar memunculkan Exception jika terjadi error
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    
-    // Set default fetch mode ke associative array
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
     
 } catch (PDOException $e) {
-    // Jika koneksi gagal, hentikan eksekusi dan kirimkan error
-    header('Content-Type: application/json');
-    echo json_encode([
-        'success' => false,
-        'message' => "Koneksi database gagal untuk sekolah ini ($dbname). Pastikan database sudah dibuat dan User Master diizinkan."
-    ]);
-    exit;
+    try {
+        // Percobaan 2: Menggunakan Username yang sama persis dengan Nama Database
+        // Ini solusi jika Hostinger memaksa pembuatan user baru untuk setiap database
+        $user_fallback = $dbname; 
+        $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $user_fallback, $password);
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+    } catch (PDOException $e2) {
+        // Jika keduanya gagal
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => false,
+            'message' => "Koneksi database gagal untuk sekolah ini ($dbname). Pastikan database sudah dibuat dengan password 'Absensi231-'."
+        ]);
+        exit;
+    }
 }
 ?>

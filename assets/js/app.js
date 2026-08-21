@@ -5,10 +5,10 @@ const App = {
     const host = window.location.hostname;
     // Jika berjalan di localhost (tes lokal), arahkan ke domain utama
     if (host === 'localhost' || host === '127.0.0.1' || host === '') {
-      return 'https://absensikula.online/api.php';
+      return 'https://absensikula.online/backend-php/api.php';
     }
     // Jika di production, gunakan subdomain secara otomatis (misal: sdn1bna.absensikula.online)
-    return `https://${host}/api.php`;
+    return `https://${host}/backend-php/api.php`;
   })(),
 
   init() {
