@@ -34,7 +34,17 @@ document.addEventListener('DOMContentLoaded', () => {
             App.clearDatabaseCache();
             App.showToast('Login berhasil! Mengalihkan...', 'success');
             
-            const user = response.data || response.user;
+            let user;
+            let schoolProfile = response.schoolProfile;
+            
+            // Handle struktur baru (nested user & schoolProfile) atau struktur lama
+            if (response.data && response.data.user) {
+              user = response.data.user;
+              if (response.data.schoolProfile) schoolProfile = response.data.schoolProfile;
+            } else {
+              user = response.data || response.user;
+            }
+            
             let role = 'pegawai';
             const uname = user.username ? user.username.toLowerCase() : '';
             const userRole = user.role ? user.role.toLowerCase() : '';
@@ -52,8 +62,8 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('userId', user.username);
             localStorage.setItem('userData', JSON.stringify(user));
             
-            if (response.schoolProfile) {
-              localStorage.setItem('schoolProfile', JSON.stringify(response.schoolProfile));
+            if (schoolProfile) {
+              localStorage.setItem('schoolProfile', JSON.stringify(schoolProfile));
             }
             if (response.adminToken) {
               localStorage.setItem('adminToken', response.adminToken);
