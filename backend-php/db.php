@@ -12,7 +12,7 @@ $password = 'Absensi231-'; // Password user master Anda
 
 // Logika Pemilihan Database (Multi-Tenant)
 // Default database (untuk absensikula.online atau sdn24)
-$dbname = 'u696975859_absensi_db'; 
+$dbname = 'u696975859_sdn24'; 
 
 // Jika diakses dari subdomain (misal: sdn1bna.absensikula.online)
 if ($subdomain !== 'absensikula' && $subdomain !== 'www' && $subdomain !== 'localhost' && $subdomain !== '127') {
