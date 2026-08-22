@@ -253,29 +253,47 @@ try {
             $stmt->execute([$payload['username'], $payload['status'], $date . '%']);
             $existing = $stmt->fetch();
             
-            if ($existing && empty($payload['forceEdit'])) {
-                echo json_encode(['success' => false, 'requireConfirmation' => true, 'message' => 'Data sudah ada']);
-                exit;
-            }
-            
             if ($existing) {
                 // Update
                 $stmt = $pdo->prepare("UPDATE attendance SET timestamp = ?, keterangan = ? WHERE id = ?");
                 $stmt->execute([$timestamp, $payload['keterangan'] ?? 'Absen Manual', $existing['id']]);
             } else {
                 // Insert
-                $stmt = $pdo->prepare("INSERT INTO attendance (timestamp, username, nama, status, keterangan, jarak, photo) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $stmt = $pdo->prepare("INSERT INTO attendance (timestamp, username, nama, status, keterangan, jarak) VALUES (?, ?, ?, ?, ?, ?)");
                 $stmt->execute([
                     $timestamp,
                     $payload['username'],
                     $payload['nama'],
                     $payload['status'],
                     $payload['keterangan'] ?? 'Absen Manual',
-                    '-',
-                    ''
+                    '-'
                 ]);
             }
-            jsonResponse(true, "Absen manual berhasil disimpan");
+            
+            jsonResponse(true, "Absensi manual berhasil disimpan!");
+            break;
+
+        // ==========================================
+        // 4. SETTINGS / PENGATURAN
+        // ==========================================
+        case 'updateSchoolProfile':
+            if (!$payload || !isset($payload['profile'])) {
+                jsonResponse(false, "Data profil tidak valid");
+            }
+            $profileStr = json_encode($payload['profile']);
+            $stmt = $pdo->prepare("UPDATE settings SET value = ? WHERE key_name = 'SCHOOL_PROFILE'");
+            $stmt->execute([$profileStr]);
+            jsonResponse(true, "Profil sekolah berhasil diperbarui");
+            break;
+
+        case 'updateAppConfig':
+            if (!$payload || !isset($payload['config'])) {
+                jsonResponse(false, "Data konfigurasi tidak valid");
+            }
+            $configStr = json_encode($payload['config']);
+            $stmt = $pdo->prepare("UPDATE settings SET value = ? WHERE key_name = 'APP_CONFIG'");
+            $stmt->execute([$configStr]);
+            jsonResponse(true, "Konfigurasi aplikasi berhasil diperbarui");
             break;
 
         case 'manualAttendanceMassal':

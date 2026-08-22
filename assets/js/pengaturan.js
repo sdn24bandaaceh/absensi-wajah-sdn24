@@ -5,17 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => { window.location.href = 'dashboard.html'; }, 1000);
     return;
   }
-  if (userRole !== 'superadmin') {
-    const panelProfil = document.getElementById('panelProfilSekolah');
-    if (panelProfil) {
-      panelProfil.style.display = 'none';
-      const appConfigPanel = document.getElementById('formAppConfig')?.closest('.col-lg-6');
-      if (appConfigPanel) {
-        appConfigPanel.classList.remove('col-lg-6');
-        appConfigPanel.classList.add('col-lg-12');
-      }
-    }
-  }
+  // Both Admin and Superadmin can now edit school profile
+  // The layout will always show both panels
 
   let currentProfile = {};
 
